@@ -63,7 +63,6 @@ async def generate_session_summary(
     user_id: uuid.UUID,
     transcript_entries: List[Dict[str, Any]],
     guidance_entries: List[Dict[str, Any]],
-    episodic_summary: Optional[str],
     session_language: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Create and persist a structured session summary + highlights.
@@ -81,7 +80,6 @@ async def generate_session_summary(
 
         summary_payload = await gs.summarize_session(
             transcript_entries=merged_transcript,
-            episodic_summary=episodic_summary,
             user_id=str(user_id),
             prior_sessions=prior_sessions,
         )
@@ -96,7 +94,6 @@ async def generate_session_summary(
     else:
         summary_payload = await cerebras_service.summarize_session(
             transcript_entries=merged_transcript,
-            episodic_summary=episodic_summary,
         )
 
     localized_summary: Optional[Dict[str, str]] = None
@@ -169,7 +166,6 @@ async def generate_session_summary(
             user_id=user_id,
             summary=summary_payload.get("overall_summary", ""),
             highlights=highlights,
-            episodic_summary=episodic_summary,
         )
         session.commit()
 

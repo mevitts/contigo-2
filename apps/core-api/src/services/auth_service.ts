@@ -14,6 +14,7 @@ export interface AppEnv {
   FRONTEND_APP_URL?: string;
   FORCE_DEMO_AUTH?: string;
   PYTHON_VOICE_SERVICE_URL?: string;
+  PYTHON_VOICE_SERVICE_PUBLIC_URL?: string;
 }
 
 // Extend AppEnv to ensure DB connection string is available

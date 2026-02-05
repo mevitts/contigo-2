@@ -325,7 +325,6 @@ If the Spanish is perfect, return:
     async def summarize_session(
         self,
         transcript_entries: List[Dict[str, Any]],
-        episodic_summary: Optional[str] = None,
         user_id: str = None,
         prior_sessions: List[Dict[str, Any]] = None,
         model: Optional[str] = None,
@@ -339,7 +338,6 @@ If the Spanish is perfect, return:
 
         Args:
             transcript_entries: List of {"agent": "...", "content": "..."} entries
-            episodic_summary: Optional SmartMemory episodic summary
             user_id: User ID for cross-session pattern tracking
             prior_sessions: Optional list of prior session summaries for longitudinal insights
             model: Model to use
@@ -351,7 +349,7 @@ If the Spanish is perfect, return:
         if not self.api_key:
             logger.warning("Gemini unavailable for session summary; returning mock payload")
             return {
-                "overall_summary": episodic_summary or "Session summary unavailable.",
+                "overall_summary": "Session summary unavailable.",
                 "topics": [],
                 "notable_moments": [],
                 "learning_focus": [],
@@ -371,9 +369,6 @@ If the Spanish is perfect, return:
                 if session.get('learning_focus'):
                     user_prompt += f"  Focus areas: {', '.join(session['learning_focus'][:3])}\n"
             user_prompt += "\n---\n\n"
-
-        if episodic_summary:
-            user_prompt += f"Raindrop summary: {episodic_summary}\n\n"
 
         user_prompt += "Current conversation transcript:\n" + conversation_text
 
@@ -399,7 +394,7 @@ Always include the Spanish phrases for any new vocabulary or preferences shared 
         try:
             client = self._get_client()
             if client is None:
-                return {"overall_summary": episodic_summary or "Summary unavailable.", "topics": [], "notable_moments": [], "learning_focus": []}
+                return {"overall_summary": "Summary unavailable.", "topics": [], "notable_moments": [], "learning_focus": []}
 
             response = await self._async_generate(
                 client=client,
@@ -422,9 +417,9 @@ Always include the Spanish phrases for any new vocabulary or preferences shared 
             logger.error(f"Gemini session summarization failed: {exc}")
             if settings.GEMINI_FALLBACK_TO_CEREBRAS:
                 from services.cerebras_service import cerebras_service
-                return await cerebras_service.summarize_session(transcript_entries, episodic_summary, model=settings.CEREBRAS_MODEL)
+                return await cerebras_service.summarize_session(transcript_entries, model=settings.CEREBRAS_MODEL)
             return {
-                "overall_summary": episodic_summary or "Summary unavailable due to AI error.",
+                "overall_summary": "Summary unavailable due to AI error.",
                 "topics": [],
                 "notable_moments": [],
                 "learning_focus": [],

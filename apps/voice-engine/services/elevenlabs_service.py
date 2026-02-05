@@ -6,9 +6,17 @@ import logging
 import uuid  # Import uuid
 import base64
 import time
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import AsyncGenerator, Optional, cast, Any, Dict
+from typing import AsyncGenerator, Optional, cast, Any, Dict, List
 from config.settings import settings
+
+
+@dataclass
+class SessionArtifacts:
+    """Local session artifacts for summary generation."""
+    transcript: List[Dict[str, Any]] = field(default_factory=list)
+    guidance_entries: List[Dict[str, Any]] = field(default_factory=list)
 from services.tutor_service import (
     register_user_turn,
     register_agent_turn,
@@ -18,7 +26,6 @@ from services.tutor_service import (
 )
 from services.cerebras_service import cerebras_service
 from services.db_service import engine         # <-- YOUR DB ENGINE
-from services.memory_service import memory_service, MemorySessionArtifacts
 from sqlmodel import Session                     # <-- YOUR DB SESSION
 
 logger = logging.getLogger(__name__)
@@ -62,29 +69,27 @@ def _pcm_base64_to_wav_base64(pcm_b64: str, sample_rate: int = 16000, channels: 
 class ElevenLabsConversationHandler:
     """Maneja la conversación real con ElevenLabs WebSocket"""
     
-    def __init__(self, agent_id: str, 
-                 frontend_websocket, 
-                 conversation_id: str = "", 
-                 api_key: str = "", 
-                 user_id: Optional[uuid.UUID] = None, 
+    def __init__(self, agent_id: str,
+                 frontend_websocket,
+                 conversation_id: str = "",
+                 api_key: str = "",
+                 user_id: Optional[uuid.UUID] = None,
                  model: Optional[str] = None,
-                 memory_session_id: Optional[str] = None,
                  analysis_model: Optional[str] = None,
                  dynamic_variables: Optional[Dict[str, object]] = None
                  ):
-        
+
         self.agent_id = agent_id
         self.frontend_ws = frontend_websocket
         self.elevenlabs_ws: Optional[Any] = None
         self.is_active = False
         self.conversation_id = conversation_id
         self.api_key = api_key if api_key else settings.ELEVENLABS_API_KEY
-        
+
         self.user_id = user_id
         self.model = model
         self.analysis_model = analysis_model or settings.CEREBRAS_MODEL
         self.last_agent_text = ""
-        self.memory_session_id = memory_session_id
         self.user_turn_counter = 0
         self.last_user_audio_ts = time.monotonic()
         self.keepalive_task: Optional[asyncio.Task] = None
@@ -294,24 +299,8 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
         self.keepalive_task = asyncio.create_task(_wait_and_ping())
 
     def _capture_memory(self, role: str, content: str):
-        if not content:
-            return
-        session_id = self.memory_session_id
-        if not session_id or not settings.ENABLE_SMART_MEMORY:
-            return
-
-        async def _store():
-            try:
-                await memory_service.put_turn_memory(
-                    session_id=session_id,
-                    content=content,
-                    timeline="conversation",
-                    agent=role
-                )
-            except Exception as mem_err:
-                logger.debug(f"SmartMemory store failed: {mem_err}")
-
-        asyncio.create_task(_store())
+        """Legacy method - SmartMemory has been deprecated. Now a no-op."""
+        pass
 
     def _append_local_transcript(self, role: str, text: str) -> None:
         content = (text or "").strip()
@@ -704,7 +693,6 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                                 agent_text=agent_text,
                                 model=self.analysis_model,
                                 guidance_callback=self._handle_guidance,
-                                memory_session_id=self.memory_session_id,
                             )
                         )
 
@@ -817,7 +805,7 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                 },
             )
 
-    def build_local_summary_artifacts(self) -> Optional[MemorySessionArtifacts]:
+    def build_local_summary_artifacts(self) -> Optional[SessionArtifacts]:
         if not self.local_transcript and not self.guidance_history:
             return None
 
@@ -836,10 +824,9 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                 }
             )
 
-        return MemorySessionArtifacts(
+        return SessionArtifacts(
             transcript=list(self.local_transcript),
             guidance_entries=guidance_entries,
-            episodic_summary=None,
         )
 
 
@@ -847,15 +834,14 @@ class ElevenLabsService:
     def __init__(self):
         pass
     
-    async def create_conversation(self, agent_id: str, 
-                                  audio_interface, 
-                                  conversation_id: str = '', 
+    async def create_conversation(self, agent_id: str,
+                                  audio_interface,
+                                  conversation_id: str = '',
                                   api_key: str = '',
-                                  user_id: Optional[uuid.UUID] = None, 
+                                  user_id: Optional[uuid.UUID] = None,
                                   model: Optional[str] = None,
-                                  memory_session_id: Optional[str] = None,
                                   analysis_model: Optional[str] = None,
-                                  dynamic_variables: Optional[Dict[str, object]] = None):       
+                                  dynamic_variables: Optional[Dict[str, object]] = None):
         """Crea una conversación con el agente especificado"""
         try:
             conversation = ElevenLabsConversationHandler(
@@ -865,7 +851,6 @@ class ElevenLabsService:
                 api_key,
                 user_id,
                 model,
-                memory_session_id,
                 analysis_model,
                 dynamic_variables,
             )

@@ -8,7 +8,6 @@ from sqlmodel import Session
 
 from services.db_service import engine, save_learning_note
 from services.cerebras_service import cerebras_service
-from services.memory_service import memory_service
 from config.settings import settings
 
 # Gemini service for hackathon integration (lazy import to avoid startup errors if SDK missing)
@@ -259,7 +258,6 @@ async def register_agent_turn(
     agent_text: str,
     model: str,
     guidance_callback: Optional[GuidanceCallback] = None,
-    memory_session_id: Optional[str] = None,
 ) -> None:
     text = (agent_text or "").strip()
     if not text or not redis_client:
@@ -300,7 +298,6 @@ async def register_agent_turn(
         user_id=user_id,
         conversation_id=conversation_id,
         model=model,
-        memory_session_id=memory_session_id,
     )
 
     if guidance_callback and analysis.get("guidance"):
@@ -313,7 +310,6 @@ async def _analyze_cluster(
     user_id: uuid.UUID,
     conversation_id: uuid.UUID,
     model: str,
-    memory_session_id: Optional[str],
 ) -> dict:
     logger.info("Running clustered analysis from Redis", extra={"conversation_id": str(conversation_id), "turns": len(cluster)})
     history_text = "\n".join(
@@ -370,22 +366,6 @@ async def _analyze_cluster(
             analysis=db_payload,
         )
         session.commit()
-
-    if memory_session_id and db_payload["suggestion"]:
-        await memory_service.put_turn_memory(
-            session_id=memory_session_id,
-            content=db_payload["suggestion"],
-            timeline=settings.GUIDANCE_TIMELINE_NAME,
-            agent="system",
-        )
-        logger.info(
-            "Guidance stored to SmartMemory",
-            extra={
-                "conversation_id": str(conversation_id),
-                "session_id": memory_session_id,
-                "timeline": settings.GUIDANCE_TIMELINE_NAME,
-            },
-        )
 
     # Store adaptive recommendation for session summary and cross-session tracking
     if settings.ENABLE_ADAPTIVE_RECOMMENDATIONS:
@@ -466,5 +446,4 @@ async def analyze_turn(
         user_id=user_id,
         conversation_id=conversation_id,
         model=model,
-        memory_session_id=None,
     )

@@ -382,7 +382,6 @@ Focus guidance on how the tutor should adjust speed, difficulty, or topic emphas
     async def summarize_session(
         self,
         transcript_entries: List[Dict[str, Any]],
-        episodic_summary: Optional[str] = None,
         model: Optional[str] = None,
         timeout: float = 10.0,
     ) -> Dict[str, Any]:
@@ -390,7 +389,7 @@ Focus guidance on how the tutor should adjust speed, difficulty, or topic emphas
         if not self.api_key:
             logger.warning("Cerebras unavailable for session summary; returning mock payload")
             return {
-                "overall_summary": episodic_summary or "Session summary unavailable.",
+                "overall_summary": "Session summary unavailable.",
                 "topics": [],
                 "notable_moments": [],
                 "learning_focus": [],
@@ -399,11 +398,7 @@ Focus guidance on how the tutor should adjust speed, difficulty, or topic emphas
         conversation_text = "\n".join(
             f"{entry.get('agent', 'system').title()}: {entry.get('content', '')}" for entry in transcript_entries
         )
-        user_prompt = (
-            (f"Raindrop summary: {episodic_summary}\n\n" if episodic_summary else "")
-            + "Conversation transcript:\n"
-            + conversation_text
-        )
+        user_prompt = "Conversation transcript:\n" + conversation_text
         system_prompt = """You summarize Spanish tutoring sessions.
 Return ONLY valid JSON:
 {
@@ -432,7 +427,7 @@ Always include the Spanish phrases for any new vocabulary or preferences shared 
         except Exception as exc:
             logger.error(f"Session summarization failed: {exc}")
             return {
-                "overall_summary": episodic_summary or "Summary unavailable due to AI error.",
+                "overall_summary": "Summary unavailable due to AI error.",
                 "topics": [],
                 "notable_moments": [],
                 "learning_focus": [],

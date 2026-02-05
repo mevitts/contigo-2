@@ -236,14 +236,12 @@ def save_session_summary(
     user_id: uuid.UUID,
     summary: str,
     highlights: dict,
-    episodic_summary: str | None = None,
 ):
     record = SessionSummaries(
         conversation_id=conversation_id,
         user_id=user_id,
         summary=summary,
         highlights_json=json.dumps(highlights or {}),
-        episodic_summary=episodic_summary,
     )
     session.add(record)
     logger.info("Session summary saved", extra={"conversation_id": str(conversation_id)})

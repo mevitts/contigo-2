@@ -47,8 +47,8 @@ export function PreRollView({ onComplete }: PreRollViewProps) {
           transition={{ duration: 0.8 }}
           className="space-y-2"
         >
-          <h2 className="text-white font-serif text-4xl md:text-5xl">Setting the scene...</h2>
-          <p className="text-white/80 font-sans text-lg tracking-widest uppercase">Terraza • Coffee Shop</p>
+          <h2 className="text-white font-serif text-4xl md:text-5xl">Connecting...</h2>
+          <p className="text-white/80 font-sans text-lg tracking-widest uppercase">Preparing your tutor</p>
         </motion.div>
 
         <div className="flex justify-center gap-2">
