@@ -1,0 +1,87 @@
+# --- Secrets / local env ---
+.env
+.env.*
+
+
+# Common credential / key material
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa
+id_ed25519
+
+# --- User-requested exclusions ---
+.claude/
+130context/
+network_logs/
+docs/
+
+# Not using Next.js app (using apps/web instead)
+apps/next-web/
+
+# No markdown in repo
+*.md
+*.txt
+
+# No tests in repo
+**/tests/
+**/__tests__/
+**/*.test.*
+**/*.spec.*
+
+# No logs / dev artifacts
+*.log
+logs/
+**/logs/
+
+# --- Node / JS / TS ---
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+
+dist/
+build/
+coverage/
+.turbo/
+.eslintcache
+
+# Next.js
+.next/
+out/
+
+# Vite
+apps/web/dist/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+venv/
+.venv/
+apps/voice-engine/venv/
+
+# --- Docker / compose local state ---
+*.pid
+
+# --- OS / IDE ---
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Misc ---
+*.har
+
+docker-compose.yml
+ref_images/checkout.png
+*.png
+apps/voice-engine/config/logging_config.py

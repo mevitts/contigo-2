@@ -1,0 +1,59 @@
+# Docker Compose Production Configuration
+
+# TODO: Implement actual production Docker Compose configuration.
+# This file should define services for:
+# - Core API
+# - Voice Engine
+# - Redis (optional, if not using a managed service like Upstash)
+# - Caddy (or other reverse proxy)
+
+# Example structure (conceptual):
+# version: '3.8'
+# services:
+#   core-api:
+#     build:
+#       context: ./apps/core-api
+#       dockerfile: Dockerfile
+#     environment:
+#       - VULTR_DB_CONNECTION_STRING=${VULTR_DB_CONNECTION_STRING}
+#       # ... other Core API env vars
+#     ports:
+#       - "3001:3001"
+#     depends_on:
+#       - redis
+#       - postgres # if self-hosted
+#
+#   voice-engine:
+#     build:
+#       context: ./apps/voice-engine
+#       dockerfile: Dockerfile
+#     environment:
+#       - REDIS_URL=${REDIS_URL}
+#       # ... other Voice Engine env vars
+#     ports:
+#       - "8000:8000"
+#     depends_on:
+#       - redis
+#
+#   redis:
+#     image: redis:7-alpine
+#     volumes:
+#       - redis_data:/data
+#     ports:
+#       - "6379:6379"
+#
+#   caddy:
+#     image: caddy:2-alpine
+#     volumes:
+#       - ./Caddyfile:/etc/caddy/Caddyfile
+#       - caddy_data:/data
+#     ports:
+#       - "80:80"
+#       - "443:443"
+#     depends_on:
+#       - core-api
+#       - voice-engine
+#
+# volumes:
+#   redis_data:
+#   caddy_data:
