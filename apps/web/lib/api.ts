@@ -1,10 +1,13 @@
 import { appConfig } from './config';
 import type {
   ApiErrorShape,
+  CreateReferenceRequest,
   CreateSessionRequest,
+  Reference,
   SessionRecord,
   SessionSummaryDetails,
   SpanishSnippet,
+  UpdateReferenceRequest,
   UserProfile,
   VoiceWebsocketInfo,
 } from './types';
@@ -367,4 +370,150 @@ export async function getSessionSummary(conversationId: string): Promise<Session
     }
     throw error;
   }
+}
+
+function normalizeReference(input: any): Reference {
+  return {
+    id: input.id ?? '',
+    userId: input.user_id ?? input.userId ?? '',
+    conversationId: input.conversation_id ?? input.conversationId ?? null,
+    title: input.title ?? '',
+    referenceType: input.reference_type ?? input.referenceType ?? 'OTHER',
+    url: input.url ?? null,
+    contentText: input.content_text ?? input.contentText ?? null,
+    source: input.source ?? null,
+    isPinned: Boolean(input.is_pinned ?? input.isPinned ?? false),
+    tags: input.tags ?? null,
+    notes: input.notes ?? null,
+    detectedContext: input.detected_context ?? input.detectedContext ?? null,
+    detectionMethod: input.detection_method ?? input.detectionMethod ?? null,
+    createdAt: input.created_at ?? input.createdAt ?? new Date().toISOString(),
+  };
+}
+
+export async function listReferences(
+  userId: string,
+  conversationId?: string,
+  signal?: AbortSignal
+): Promise<Reference[]> {
+  if (!userId) {
+    return [];
+  }
+
+  const data = await apiRequest<any>('/v1/references', {
+    method: 'GET',
+    signal,
+    query: { userId, conversationId },
+  });
+
+  const references: any[] = Array.isArray(data?.references) ? data.references : [];
+  return references.map(normalizeReference);
+}
+
+export async function listPinnedReferences(
+  userId: string,
+  limit = 5,
+  signal?: AbortSignal
+): Promise<Reference[]> {
+  if (!userId) {
+    return [];
+  }
+
+  const data = await apiRequest<any>('/v1/references/pinned', {
+    method: 'GET',
+    signal,
+    query: { userId, limit },
+  });
+
+  const references: any[] = Array.isArray(data?.references) ? data.references : [];
+  return references.map(normalizeReference);
+}
+
+export async function getReference(referenceId: string): Promise<Reference | null> {
+  if (!referenceId) {
+    return null;
+  }
+
+  try {
+    const data = await apiRequest<any>(`/v1/references/${referenceId}`, {
+      method: 'GET',
+    });
+
+    return data?.reference ? normalizeReference(data.reference) : null;
+  } catch (error) {
+    if (error instanceof ContigoApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function createReference(params: CreateReferenceRequest): Promise<Reference> {
+  const payload = {
+    user_id: params.userId,
+    conversation_id: params.conversationId ?? null,
+    title: params.title,
+    reference_type: params.referenceType,
+    url: params.url ?? null,
+    content_text: params.contentText ?? null,
+    source: params.source ?? null,
+    is_pinned: params.isPinned ?? false,
+    tags: params.tags ?? null,
+    notes: params.notes ?? null,
+    detected_context: params.detectedContext ?? null,
+    detection_method: params.detectionMethod ?? null,
+  };
+
+  const data = await apiRequest<any>('/v1/references', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  return {
+    id: data.id,
+    userId: params.userId,
+    conversationId: params.conversationId ?? null,
+    title: params.title,
+    referenceType: params.referenceType,
+    url: params.url ?? null,
+    contentText: params.contentText ?? null,
+    source: params.source ?? null,
+    isPinned: params.isPinned ?? false,
+    tags: params.tags ?? null,
+    notes: params.notes ?? null,
+    detectedContext: params.detectedContext ?? null,
+    detectionMethod: params.detectionMethod ?? null,
+    createdAt: data.created_at ?? new Date().toISOString(),
+  };
+}
+
+export async function updateReference(
+  referenceId: string,
+  params: UpdateReferenceRequest
+): Promise<void> {
+  const payload: Record<string, unknown> = {};
+
+  if (params.title !== undefined) payload.title = params.title;
+  if (params.referenceType !== undefined) payload.reference_type = params.referenceType;
+  if (params.url !== undefined) payload.url = params.url;
+  if (params.contentText !== undefined) payload.content_text = params.contentText;
+  if (params.source !== undefined) payload.source = params.source;
+  if (params.isPinned !== undefined) payload.is_pinned = params.isPinned;
+  if (params.tags !== undefined) payload.tags = params.tags;
+  if (params.notes !== undefined) payload.notes = params.notes;
+
+  await apiRequest(`/v1/references/${referenceId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteReference(referenceId: string): Promise<void> {
+  if (!referenceId) {
+    return;
+  }
+
+  await apiRequest(`/v1/references/${referenceId}`, {
+    method: 'DELETE',
+  });
 }

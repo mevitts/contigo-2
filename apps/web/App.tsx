@@ -5,6 +5,7 @@ import { SessionSummary } from "./components/SessionSummary";
 import { Settings } from "./components/Settings";
 import { SessionHistory } from "./components/SessionHistory";
 import { PreRollView } from "./components/PreRollView";
+import { ReferenceLibrary } from "./components/ReferenceLibrary";
 import { LoginView } from "./components/LoginView";
 import { PremiumOffer, type PremiumPlanOption, type PremiumPlanId } from "./components/PremiumOffer";
 import { MockStripeCheckout } from "./components/MockStripeCheckout";
@@ -31,7 +32,8 @@ type AppView =
   | "history"
   | "settings"
   | "premium"
-  | "checkout";
+  | "checkout"
+  | "library";
 
 type DifficultyLevel = "beginner" | "intermediate" | "advanced";
 
@@ -538,8 +540,8 @@ export default function App() {
     setVoiceConnectionError(message);
   }, []);
 
-  // Only show nav for history and settings
-  const shouldShowNav = view === "history" || view === "settings";
+  // Only show nav for history, settings, and library
+  const shouldShowNav = view === "history" || view === "settings" || view === "library";
 
   return (
     <div className="min-h-screen bg-plaster text-textMain font-sans">
@@ -591,6 +593,7 @@ export default function App() {
             onStartSession={handleStartSession}
             onGoToSettings={() => setView("settings")}
             onGoToNotebook={() => setView("history")}
+            onGoToLibrary={() => setView("library")}
             sessions={sessions}
             isLoading={sessionsLoading || isStartingSession}
           />
@@ -613,6 +616,10 @@ export default function App() {
             }}
             onSelectSession={handleSessionSelected}
           />
+        )}
+
+        {view === "library" && user && (
+          <ReferenceLibrary userId={user.id} />
         )}
 
         {view === "premium" && premiumContext && (
@@ -645,6 +652,7 @@ export default function App() {
             onEndSession={handleEndSession}
             onConnectionError={handleVoiceConnectionError}
             maxDurationSeconds={isPremiumUser ? undefined : freeLimitSeconds}
+            userId={user?.id}
           />
         )}
 

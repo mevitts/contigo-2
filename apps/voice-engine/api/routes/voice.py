@@ -14,7 +14,7 @@ from services.opus_translation_service import opus_translation_service
 from services.summary_service import generate_session_summary
 from services.tutor_service import get_user_insights_for_context, should_preactivate_soft_beginner
 from sqlmodel import Session, select, desc, func
-from models.db_models import LearningNotes, Conversations, SessionSummaries
+from models.db_models import LearningNotes, Conversations, SessionSummaries, UserReferences
 from config.settings import settings
 from config.agents import DifficultyLevel, get_difficulty_info
 
@@ -165,6 +165,29 @@ def _fetch_last_conversation_context(user_id: uuid.UUID) -> Optional[dict]:
             "highlight_personal": highlight_personal,
             "highlight_spanish": highlight_snippets,
         }
+
+
+def _fetch_pinned_references(user_id: uuid.UUID, limit: int = 5) -> List[dict]:
+    """Fetch user's pinned references for agent context."""
+    with Session(engine) as db_session:
+        pinned = list(
+            db_session.exec(
+                select(UserReferences)
+                .where(UserReferences.user_id == user_id)
+                .where(UserReferences.is_pinned == True)  # noqa: E712 - SQL comparison
+                .order_by(desc(UserReferences.created_at))
+                .limit(limit)
+            ).all()
+        )
+
+        return [
+            {
+                "title": ref.title,
+                "type": str(ref.reference_type.value) if hasattr(ref.reference_type, 'value') else str(ref.reference_type),
+                "source": ref.source,
+            }
+            for ref in pinned
+        ]
 
 
 async def _collect_memory_breadcrumbs(user_id: uuid.UUID) -> List[str]:
@@ -336,6 +359,20 @@ def _build_agent_custom_instructions(
         )
         for snippet in memory_snippets:
             lines.append(f"- {snippet}")
+
+    # Include user's pinned references for cultural context
+    pinned_refs = _fetch_pinned_references(user_id, limit=5)
+    if pinned_refs:
+        lines.append(
+            "\nThe learner has saved these cultural references to their library. "
+            "If any naturally relate to the conversation, you can reference them:"
+        )
+        for ref in pinned_refs:
+            ref_label = f"- {ref['title']}"
+            if ref.get('source'):
+                ref_label += f" by {ref['source']}"
+            ref_label += f" ({ref['type'].lower()})"
+            lines.append(ref_label)
 
     # Pre-activate soft beginner mode if user historically struggles
     if preactivate_soft:

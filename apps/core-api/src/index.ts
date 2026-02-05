@@ -7,6 +7,7 @@ import sessions from './routes/sessions.js';
 import voice from './routes/voice.js';
 import sessionToken from './routes/session-token.js';
 import learningNotes from './routes/learning-notes.js';
+import references from './routes/references.js';
 import { loadConfig } from './config.js';
 import authMiddleware from './middleware/authMiddleware.js';
 import rateLimiter from './middleware/rateLimiter.js'; // Import rateLimiter
@@ -57,6 +58,7 @@ app.use('*', rateLimiter({ windowMs: 60 * 1000, max: 100 })); // 100 requests pe
 app.route('/sessions', sessions);
 app.route('/voice', voice);
 app.route('/v1/learning-notes', learningNotes);
+app.route('/v1/references', references);
 
 app.get('/', (c) => {
   return c.text('Hello Hono!');

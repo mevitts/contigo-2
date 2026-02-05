@@ -97,3 +97,56 @@ export interface SessionSummaryDetails {
   episodicSummary?: string | null;
   localizedSummary?: LocalizedSummary | null;
 }
+
+export type ReferenceType = 'SONG' | 'LYRICS' | 'ARTICLE' | 'VIDEO' | 'BOOK_EXCERPT' | 'CULTURAL' | 'OTHER';
+
+export interface Reference {
+  id: string;
+  userId: string;
+  conversationId?: string | null;
+  title: string;
+  referenceType: ReferenceType;
+  url?: string | null;
+  contentText?: string | null;
+  source?: string | null;
+  isPinned: boolean;
+  tags?: string[] | null;
+  notes?: string | null;
+  detectedContext?: string | null;
+  detectionMethod?: 'auto' | 'manual' | null;
+  createdAt: string;
+}
+
+export interface DetectedReference {
+  title: string;
+  type: ReferenceType;
+  source?: string;
+  context: string;
+  confidence: number;
+}
+
+export interface CreateReferenceRequest {
+  userId: string;
+  conversationId?: string | null;
+  title: string;
+  referenceType: ReferenceType;
+  url?: string | null;
+  contentText?: string | null;
+  source?: string | null;
+  isPinned?: boolean;
+  tags?: string[] | null;
+  notes?: string | null;
+  detectedContext?: string | null;
+  detectionMethod?: 'auto' | 'manual';
+}
+
+export interface UpdateReferenceRequest {
+  title?: string;
+  referenceType?: ReferenceType;
+  url?: string | null;
+  contentText?: string | null;
+  source?: string | null;
+  isPinned?: boolean;
+  tags?: string[] | null;
+  notes?: string | null;
+}

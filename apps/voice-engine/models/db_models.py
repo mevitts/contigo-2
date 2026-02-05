@@ -13,6 +13,16 @@ class NoteType(str, Enum):
     TOPIC_MENTION = "TOPIC_MENTION"
     CLUSTER = "CLUSTER"
 
+
+class ReferenceType(str, Enum):
+    SONG = "SONG"
+    LYRICS = "LYRICS"
+    ARTICLE = "ARTICLE"
+    VIDEO = "VIDEO"
+    BOOK_EXCERPT = "BOOK_EXCERPT"
+    CULTURAL = "CULTURAL"
+    OTHER = "OTHER"
+
 class Users(SQLModel, table=True):
     # Force SQL table name to lowercase 'users'
     __tablename__: ClassVar[str] = "users"
@@ -27,6 +37,7 @@ class Users(SQLModel, table=True):
 
     conversations: List["Conversations"] = Relationship(back_populates="user")
     learning_notes: List["LearningNotes"] = Relationship(back_populates="user")
+    user_references: List["UserReferences"] = Relationship(back_populates="user")
 
 class Conversations(SQLModel, table=True):
     # Force SQL table name to lowercase 'conversations'
@@ -76,3 +87,25 @@ class SessionSummaries(SQLModel, table=True):
     highlights_json: str = Field(sa_column=Column(TEXT))
     episodic_summary: Optional[str] = Field(default=None, sa_column=Column(TEXT))
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserReferences(SQLModel, table=True):
+    __tablename__: ClassVar[str] = "user_references"
+
+    id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id", index=True)
+    conversation_id: Optional[uuid.UUID] = Field(default=None, foreign_key="conversations.id")
+
+    title: str = Field(sa_column=Column(TEXT))
+    reference_type: ReferenceType
+    url: Optional[str] = Field(default=None, sa_column=Column(TEXT))
+    content_text: Optional[str] = Field(default=None, sa_column=Column(TEXT))
+    source: Optional[str] = Field(default=None, sa_column=Column(TEXT))
+    is_pinned: bool = Field(default=False)
+    tags: Optional[str] = Field(default=None, sa_column=Column(TEXT))  # JSON array as TEXT
+    notes: Optional[str] = Field(default=None, sa_column=Column(TEXT))
+    detected_context: Optional[str] = Field(default=None, sa_column=Column(TEXT))
+    detection_method: Optional[str] = Field(default=None, sa_column=Column(TEXT))  # "auto" | "manual"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    user: "Users" = Relationship(back_populates="user_references")

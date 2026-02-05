@@ -1,4 +1,4 @@
-import { Mic, Globe, Book } from "lucide-react";
+import { Mic, Globe, Book, BookOpen } from "lucide-react";
 import type { SessionRecord } from "../lib/types";
 
 interface DashboardProps {
@@ -6,6 +6,7 @@ interface DashboardProps {
   onStartSession: () => void;
   onGoToSettings: () => void;
   onGoToNotebook: () => void;
+  onGoToLibrary?: () => void;
   sessions: SessionRecord[];
   isLoading?: boolean;
 }
@@ -19,7 +20,7 @@ const NoiseOverlay = () => (
   />
 );
 
-export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNotebook, isLoading = false }: DashboardProps) {
+export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNotebook, onGoToLibrary, isLoading = false }: DashboardProps) {
   return (
     <div className="min-h-screen bg-plaster font-serif animate-fade-in flex flex-col relative overflow-hidden">
       <NoiseOverlay />
@@ -77,13 +78,24 @@ export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNote
 
       {/* Footer */}
       <div className="pb-12 px-8 md:px-16 lg:px-24 z-20 mt-auto">
-         <button 
-           onClick={onGoToNotebook}
-           className="w-full md:w-auto flex items-center justify-center gap-2 text-textSoft hover:text-pink transition-colors py-4 font-sans text-xs font-bold uppercase tracking-widest opacity-90 hover:opacity-100"
-         >
-            <Book size={16} />
-            <span>Open Notebook</span>
-         </button>
+         <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+           <button
+             onClick={onGoToNotebook}
+             className="w-full md:w-auto flex items-center justify-center gap-2 text-textSoft hover:text-pink transition-colors py-4 font-sans text-xs font-bold uppercase tracking-widest opacity-90 hover:opacity-100"
+           >
+              <Book size={16} />
+              <span>Open Notebook</span>
+           </button>
+           {onGoToLibrary && (
+             <button
+               onClick={onGoToLibrary}
+               className="w-full md:w-auto flex items-center justify-center gap-2 text-textSoft hover:text-emerald-500 transition-colors py-4 font-sans text-xs font-bold uppercase tracking-widest opacity-90 hover:opacity-100"
+             >
+                <BookOpen size={16} />
+                <span>Reference Library</span>
+             </button>
+           )}
+         </div>
       </div>
     </div>
   );
