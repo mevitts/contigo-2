@@ -74,6 +74,7 @@ const DEFAULT_PREFERENCES: { difficulty: DifficultyLevel; adaptive: boolean } = 
 };
 
 const USER_STORAGE_KEY = "contigo:user";
+const TOKEN_STORAGE_KEY = "contigo:token";
 
 //console.log('dev mode?', import.meta.env.VITE_CONTIGO_DEVELOPER_MODE, appConfig);
 //console.log('config', appConfig.developerMode, appConfig.devUserProfile);
@@ -102,6 +103,21 @@ function persistUser(profile: UserProfile | null): void {
     }
   } catch (_err) {
     // Ignore storage errors (e.g., Safari private mode)
+  }
+}
+
+function persistToken(token: string | null): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    if (token) {
+      window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    } else {
+      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+  } catch (_err) {
+    // Ignore storage errors
   }
 }
 
@@ -137,7 +153,7 @@ function persistPreferences(difficulty: DifficultyLevel, adaptive: boolean): voi
   }
 }
 
-function extractUserFromUrl(): { profile: UserProfile | null; error?: string } {
+function extractUserFromUrl(): { profile: UserProfile | null; token?: string; error?: string } {
   if (typeof window === "undefined") {
     return { profile: null };
   }
@@ -166,7 +182,9 @@ function extractUserFromUrl(): { profile: UserProfile | null; error?: string } {
     demoMode: params.get("demo_mode") === "1",
   };
 
-  return { profile };
+  const token = params.get("token") || undefined;
+
+  return { profile, token };
 }
 
 function resolveErrorMessage(error: unknown): string {
@@ -254,9 +272,12 @@ export default function App() {
       return;
     }
 
-    const { profile, error } = extractUserFromUrl();
+    const { profile, token, error } = extractUserFromUrl();
     if (profile) {
       applyAuthenticatedUser(profile);
+      if (token) {
+        persistToken(token);
+      }
       setView("dashboard");
       return;
     }
@@ -494,6 +515,7 @@ export default function App() {
   const handleLogout = React.useCallback(() => {
     setUser(null);
     persistUser(null);
+    persistToken(null);
     setSessions([]);
     setActiveSession(null);
     setVoiceUrl(undefined);
@@ -515,8 +537,11 @@ export default function App() {
     setIsAuthenticating(true);
     setAppError(null);
     try {
-      const profile = await authenticateDemoUser();
+      const { profile, token } = await authenticateDemoUser();
       applyAuthenticatedUser(profile);
+      if (token) {
+        persistToken(token);
+      }
       setView("dashboard");
     } catch (error) {
       setAppError(resolveErrorMessage(error));

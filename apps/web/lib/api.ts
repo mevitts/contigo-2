@@ -107,13 +107,29 @@ async function parseError(response: Response): Promise<ApiErrorShape | undefined
 }
 
 
+function getStoredToken(): string | null {
+  try {
+    return typeof window !== 'undefined' ? window.localStorage.getItem('contigo:token') : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
 async function apiRequest<T>(path: string, init: JsonRequestInit = {}): Promise<T> {
   const { query, headers, body, ...rest } = init;
   const url = buildUrl(path, query);
+
+  const authHeaders: Record<string, string> = {};
+  const token = getStoredToken();
+  if (token) {
+    authHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
   const fetchInit: RequestInit = {
     ...rest,
     headers: {
       ...JSON_HEADERS,
+      ...authHeaders,
       ...(headers ?? {}),
     },
     body,
@@ -162,7 +178,7 @@ function normalizeSession(input: any): SessionRecord {
   };
 }
 
-export async function authenticateDemoUser(code = appConfig.demoAuthCode): Promise<UserProfile> {
+export async function authenticateDemoUser(code = appConfig.demoAuthCode): Promise<{ profile: UserProfile; token?: string }> {
   try {
     const data = await apiRequest<any>('/auth/callback', {
       method: 'GET',
@@ -170,7 +186,7 @@ export async function authenticateDemoUser(code = appConfig.demoAuthCode): Promi
     });
 
     const user = data?.user ?? {};
-    return {
+    const profile: UserProfile = {
       id: user.id ?? 'aaaaaaaa-0000-4000-8000-000000000001',
       email: user.email,
       firstName: user.first_name ?? user.firstName,
@@ -181,20 +197,23 @@ export async function authenticateDemoUser(code = appConfig.demoAuthCode): Promi
       membershipTier: (user.membership_tier ?? user.membershipTier ?? data?.membership_tier ?? data?.membershipTier ?? 'free') as 'free' | 'premium' | 'demo',
       maxConversationMinutes: typeof data?.max_conversation_minutes === 'number' ? data.max_conversation_minutes : undefined,
     };
+    return { profile, token: data?.token ?? undefined };
   } catch (err) {
     // If the auth callback isn't available locally (404) or the API isn't running,
     // fall back to a local demo user so the frontend can continue to the dashboard.
     if (err instanceof ContigoApiError && err.status === 404) {
       return {
-        id: 'aaaaaaaa-0000-4000-8000-000000000001',
-        email: 'demo@contigo.app',
-        firstName: 'Demo',
-        lastName: 'User',
-        organizationId: undefined,
-        connectionType: 'demo',
-        demoMode: true,
-        membershipTier: 'demo',
-        maxConversationMinutes: 5,
+        profile: {
+          id: 'aaaaaaaa-0000-4000-8000-000000000001',
+          email: 'demo@contigo.app',
+          firstName: 'Demo',
+          lastName: 'User',
+          organizationId: undefined,
+          connectionType: 'demo',
+          demoMode: true,
+          membershipTier: 'demo',
+          maxConversationMinutes: 5,
+        },
       };
     }
 

@@ -1,6 +1,7 @@
 import { createMiddleware } from 'hono/factory';
+import * as jose from 'jose';
 import type { Config } from '../config.js';
-import { DEMO_USER, MOCK_USER } from '../constants.js';
+import { DEMO_USER } from '../constants.js';
 
 export interface AuthContext {
   userId: string;
@@ -26,19 +27,26 @@ const authMiddleware = createMiddleware<MiddlewareEnv>(async (c, next) => {
 
   const authHeader = c.req.header('Authorization');
 
-  // Simple mock authentication for non-demo mode
-  // NOTE: Mock token only works in demo mode for security
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
+    const secret = config?.JWT_SECRET || (c.env as any)?.VOICE_ENGINE_SECRET;
 
-    // Mock token validation - only in demo mode
-    if (config?.FORCE_DEMO_AUTH && token === MOCK_USER.TOKEN) {
-      c.set('userId', MOCK_USER.ID);
-      await next();
-      return;
+    if (secret) {
+      try {
+        const key = new TextEncoder().encode(secret);
+        const { payload } = await jose.jwtVerify(token, key, {
+          issuer: 'urn:contigo:core-api',
+        });
+
+        if (payload.sub) {
+          c.set('userId', payload.sub);
+          await next();
+          return;
+        }
+      } catch (err) {
+        console.warn('[authMiddleware] JWT verification failed:', err instanceof Error ? err.message : err);
+      }
     }
-
-    // TODO: Implement real JWT validation here for production
   }
 
   // If no valid token, return 401 Unauthorized
