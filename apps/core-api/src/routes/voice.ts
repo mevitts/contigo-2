@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import * as jose from 'jose';
 import type { DbEnv } from '../services/auth_service.js';
 import { loadSessionMetadata, parseAdaptiveFlag } from '../services/voice_service.js';
 
@@ -65,10 +66,25 @@ voice.get('/websocket-url', async (c) => {
     }
   }
 
+  // Generate a signed JWT for voice-engine WebSocket auth
+  let wsToken = '';
+  if (c.env.VOICE_ENGINE_SECRET) {
+    const secret = new TextEncoder().encode(c.env.VOICE_ENGINE_SECRET);
+    wsToken = await new jose.SignJWT({})
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setSubject(userId)
+      .setIssuer('urn:contigo:core-api')
+      .setAudience('urn:contigo:voice-engine')
+      .setExpirationTime('2h')
+      .setJti(sessionId)
+      .sign(secret);
+  }
+
   // Construct WebSocket URL for browser (using public URL, not Docker internal)
   const wsUrl = new URL('/voice/ws', publicVoiceUrl);
   wsUrl.protocol = wsUrl.protocol.replace('http', 'ws'); // http -> ws, https -> wss
-  wsUrl.searchParams.set('user_id', userId);
+  wsUrl.searchParams.set('token', wsToken);
   wsUrl.searchParams.set('session_id', sessionId);
   
   if (difficulty) {
@@ -85,15 +101,6 @@ voice.get('/websocket-url', async (c) => {
     wsUrl.searchParams.set('extra_support', 'true');
   }
 
-  console.log('Voice WebSocket issued', {
-    sessionId,
-    userId,
-    difficulty,
-    adaptive: adaptiveFlag,
-    extraSupport: extraSupportFlag,
-    metadataLoaded: Boolean(metadata)
-  });
-  
   return c.json({
     websocketUrl: wsUrl.toString(),
     sessionId,
@@ -145,7 +152,6 @@ voice.get('/health', async (c) => {
     return c.json({
       status: 'unhealthy',
       pythonService: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error'
     }, 503);
   }
 });
@@ -166,10 +172,26 @@ voice.post('/translate', async (c) => {
   try {
     const body = await c.req.json();
 
+    // Generate a short-lived JWT for voice-engine service-to-service auth
+    let authHeader: Record<string, string> = {};
+    if (c.env.VOICE_ENGINE_SECRET) {
+      const secret = new TextEncoder().encode(c.env.VOICE_ENGINE_SECRET);
+      const svcToken = await new jose.SignJWT({})
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setSubject(c.get('userId') || 'system')
+        .setIssuer('urn:contigo:core-api')
+        .setAudience('urn:contigo:voice-engine')
+        .setExpirationTime('5m')
+        .sign(secret);
+      authHeader = { 'Authorization': `Bearer ${svcToken}` };
+    }
+
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeader,
       },
       body: JSON.stringify(body),
       // 120s timeout - OPUS model download/load on first request can take 60+ seconds
@@ -195,7 +217,6 @@ voice.post('/translate', async (c) => {
     console.error('Error proxying translation request:', error);
     return c.json({
       error: 'Translation service unavailable',
-      message: error instanceof Error ? error.message : 'Unknown error',
     }, 502);
   }
 });
@@ -227,7 +248,23 @@ voice.get('/conversations/:conversationId/summary', async (c) => {
   const targetUrl = `${c.env.PYTHON_VOICE_SERVICE_URL}/voice/conversations/${conversationId}/summary`;
 
   try {
+    // Generate a short-lived JWT for voice-engine service-to-service auth
+    let svcHeaders: Record<string, string> = {};
+    if (c.env.VOICE_ENGINE_SECRET) {
+      const secret = new TextEncoder().encode(c.env.VOICE_ENGINE_SECRET);
+      const svcToken = await new jose.SignJWT({})
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setSubject(c.get('userId') || 'system')
+        .setIssuer('urn:contigo:core-api')
+        .setAudience('urn:contigo:voice-engine')
+        .setExpirationTime('5m')
+        .sign(secret);
+      svcHeaders = { 'Authorization': `Bearer ${svcToken}` };
+    }
+
     const response = await fetch(targetUrl, {
+      headers: svcHeaders,
       signal: AbortSignal.timeout(8000),
     });
 
@@ -250,7 +287,6 @@ voice.get('/conversations/:conversationId/summary', async (c) => {
     console.error('Error fetching conversation summary from voice service:', error);
     return c.json({
       error: 'Failed to fetch conversation summary',
-      message: error instanceof Error ? error.message : 'Unknown error',
     }, 502);
   }
 });

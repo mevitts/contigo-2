@@ -38,7 +38,13 @@ try:
     redis_client.ping()
     logger.info("Tutor service connected to Redis for transcript caching.")
 except redis.exceptions.ConnectionError as e:
-    logger.error(f"Tutor service could not connect to Redis: {e}", exc_info=True)
+    if settings.is_production:
+        logger.critical(
+            "FATAL: Redis unavailable in production — adaptive features and transcript caching disabled",
+            exc_info=True,
+        )
+    else:
+        logger.error(f"Tutor service could not connect to Redis: {e}", exc_info=True)
     redis_client = None
 
 def _get_transcript_key(conversation_id: uuid.UUID) -> str:

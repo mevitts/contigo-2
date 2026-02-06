@@ -9,7 +9,13 @@ logger = get_db_logger()
 
 DATABASE_URL = settings.database_url
 logger.info(f"Using database: {'PostgreSQL' if 'postgresql' in DATABASE_URL else 'SQLite'}")
-engine = create_engine(DATABASE_URL)
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=20,
+    max_overflow=40,
+    pool_recycle=3600,
+    pool_pre_ping=True,
+)
 
 
 def _ensure_note_type_values() -> None:

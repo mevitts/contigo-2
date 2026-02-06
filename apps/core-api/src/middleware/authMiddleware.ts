@@ -1,4 +1,5 @@
 import { createMiddleware } from 'hono/factory';
+import * as jose from 'jose';
 import type { Config } from '../config.js';
 import { DEMO_USER, MOCK_USER } from '../constants.js';
 
@@ -15,9 +16,9 @@ const authMiddleware = createMiddleware<MiddlewareEnv>(async (c, next) => {
     return;
   }
 
-  // In demo mode (FORCE_DEMO_AUTH=true), bypass auth and use a fixed demo user
   const config = c.var.config;
-  console.log('[authMiddleware] FORCE_DEMO_AUTH:', config?.FORCE_DEMO_AUTH, 'config exists:', !!config);
+
+  // In demo mode (FORCE_DEMO_AUTH=true), bypass auth and use a fixed demo user
   if (config?.FORCE_DEMO_AUTH) {
     c.set('userId', DEMO_USER.ID);
     await next();
@@ -26,8 +27,6 @@ const authMiddleware = createMiddleware<MiddlewareEnv>(async (c, next) => {
 
   const authHeader = c.req.header('Authorization');
 
-  // Simple mock authentication for non-demo mode
-  // NOTE: Mock token only works in demo mode for security
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
 
@@ -38,7 +37,25 @@ const authMiddleware = createMiddleware<MiddlewareEnv>(async (c, next) => {
       return;
     }
 
-    // TODO: Implement real JWT validation here for production
+    // Production JWT validation using VOICE_ENGINE_SECRET (shared HMAC secret)
+    const secret = c.env.VOICE_ENGINE_SECRET;
+    if (secret) {
+      try {
+        const secretKey = new TextEncoder().encode(secret);
+        const { payload } = await jose.jwtVerify(token, secretKey, {
+          issuer: 'urn:contigo:core-api',
+          audience: 'urn:contigo:voice-engine',
+        });
+
+        if (payload.sub) {
+          c.set('userId', payload.sub);
+          await next();
+          return;
+        }
+      } catch (err) {
+        // Token invalid or expired — fall through to 401
+      }
+    }
   }
 
   // If no valid token, return 401 Unauthorized

@@ -39,10 +39,10 @@ class Agent:
     api_key: Optional[str] = None
     
     def to_dict(self) -> Dict:
+        """Serialize agent config. Excludes api_key to prevent accidental exposure."""
         return {
             "agent_id": self.agent_id,
             "name": self.name,
             "language": self.language,
             "context": self.context,
-            "api_key": self.api_key
         }

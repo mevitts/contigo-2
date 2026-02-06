@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 import json
@@ -17,6 +18,7 @@ from sqlmodel import Session, select, desc, func
 from models.db_models import LearningNotes, Conversations, SessionSummaries
 from config.settings import settings
 from config.agents import DifficultyLevel, get_difficulty_info
+from api.auth import require_auth, validate_ws_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/voice", tags=["voice"])
@@ -536,10 +538,10 @@ async def _handle_session_error(
     try:
         await websocket.send_json({
             "type": "error",
-            "message": f"Session error: {str(error)}"
+            "message": "An unexpected session error occurred. Please try again."
         })
-    except:
-        pass
+    except Exception:
+        pass  # WebSocket may already be closed; nothing more to do
     finally:
         if session:
             session_service.end_session(session.conversation_id)
@@ -547,52 +549,57 @@ async def _handle_session_error(
 @router.websocket("/ws")
 async def voice_session(
     websocket: WebSocket,
-    user_id: str,  # In production, get this from JWT token
+    token: str,  # Signed JWT from core-api session-token endpoint
     session_id: Optional[str] = None,
     difficulty: DifficultyLevel = "auto",
     model: Optional[str] = "gpt-4-turbo",
-    adaptive: Optional[bool] = None,  # Override adaptive mode
-    extra_support: Optional[bool] = None  # Pre-activate soft beginner mode
+    adaptive: Optional[bool] = None,
+    extra_support: Optional[bool] = None,
+    user_id: Optional[str] = None,  # Deprecated — kept for backwards compat, ignored when token present
 ):
     """
     WebSocket endpoint for Spanish voice tutoring sessions.
 
-    The conversation flows naturally without pre-set topics. Future sessions will
-    continue based on conversation history and learner progress.
-
-    Args:
-        user_id: User UUID (should come from auth in production)
-        session_id: Existing conversation/session identifier created via REST (optional)
-        difficulty: Proficiency level (beginner, intermediate, advanced, auto)
-        model: GPT model for conversation analysis
-        adaptive: Override adaptive difficulty (uses ENABLE_ADAPTIVE_DIFFICULTY setting if not provided)
-        extra_support: Pre-activate soft beginner mode for extra support (user-selected)
+    Requires a signed JWT ``token`` query parameter (issued by ``/v1/session-token``).
+    The user identity is extracted from the token's ``sub`` claim.
     """
+    # Validate JWT before accepting connection
+    try:
+        authenticated_user_id = validate_ws_token(token)
+    except ValueError as auth_err:
+        # Reject with 1008 (Policy Violation) before accepting
+        await websocket.close(code=1008)
+        logger.warning("WebSocket auth rejected", extra={"reason": str(auth_err)})
+        return
+
     await websocket.accept()
     session = None
     conversation = None
-    
-    try:
-        user_uuid = _validate_user_id(user_id)
 
+    try:
+        user_uuid = _validate_user_id(authenticated_user_id)
+
+        loop = asyncio.get_running_loop()
         memory_breadcrumbs = await _collect_memory_breadcrumbs(user_uuid)
-        persona_instructions, continuity_context = _build_agent_custom_instructions(
-            user_uuid,
-            memory_snippets=memory_breadcrumbs,
-            extra_support=extra_support or False,
+        persona_instructions, continuity_context = await loop.run_in_executor(
+            None,
+            lambda: _build_agent_custom_instructions(
+                user_uuid,
+                memory_snippets=memory_breadcrumbs,
+                extra_support=extra_support or False,
+            ),
         )
         instruction_preview = " ".join(persona_instructions.splitlines()[:5])[:240]
 
-        # Enhanced logging for context exchange debugging
+        # Context exchange logging (PII-safe: log counts/flags only, not content)
         if continuity_context:
-            logger.info(f"Session continuity context: {json.dumps(continuity_context, default=str)[:1000]}")
             logger.info(
                 "Session continuity context loaded",
                 extra={
                     "user_id": str(user_uuid),
-                    "last_session_topic": continuity_context.get("topic"),
-                    "personal_callbacks": continuity_context.get("highlight_personal", [])[:3],
-                    "notable_moments": continuity_context.get("highlight_notable", [])[:3],
+                    "has_topic": bool(continuity_context.get("topic")),
+                    "personal_callback_count": len(continuity_context.get("highlight_personal", [])),
+                    "notable_moment_count": len(continuity_context.get("highlight_notable", [])),
                     "micro_adjustment": continuity_context.get("micro_adjustment"),
                     "has_summary": bool(continuity_context.get("summary_text")),
                 },
@@ -608,8 +615,7 @@ async def voice_session(
             extra={
                 "user_id": str(user_uuid),
                 "memory_snippet_count": len(memory_breadcrumbs),
-                "memory_snippets": memory_breadcrumbs[:3] if memory_breadcrumbs else [],
-                "instruction_preview": instruction_preview,
+                "instruction_length": len(persona_instructions),
             },
         )
 
@@ -685,15 +691,29 @@ async def voice_session(
             dynamic_variables=dynamic_variables,
         )
         
-        await conversation.start()
-        
+        # Enforce max session duration
+        max_seconds = settings.MAX_SESSION_MINUTES * 60
+        try:
+            await asyncio.wait_for(conversation.start(), timeout=max_seconds)
+        except asyncio.TimeoutError:
+            logger.info(
+                "Session timed out (max duration reached)",
+                extra={"user_id": str(user_uuid), "max_minutes": settings.MAX_SESSION_MINUTES},
+            )
+            try:
+                await websocket.send_json({
+                    "type": "session_timeout",
+                    "message": f"Session ended after {settings.MAX_SESSION_MINUTES} minutes.",
+                })
+            except Exception:
+                pass
+
     except ValueError as e:
-        # Handle validation errors (invalid user_id)
         logger.error(f"Validation error: {str(e)}")
         await websocket.close(code=1008)
-        
+
     except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected for user {user_id}")
+        logger.info(f"WebSocket disconnected for user {authenticated_user_id}")
         if session:
             session_service.end_session(session.conversation_id)
     
@@ -746,24 +766,35 @@ async def get_difficulty_levels():
     }
 
 @router.get("/sessions/active")
-async def get_active_sessions(user_id: Optional[str] = None):
+async def get_active_sessions(
+    user_id: Optional[str] = None,
+    auth_user_id: str = Depends(require_auth),
+):
     """Get active voice sessions, optionally filtered by user"""
-    user_uuid = None
+    # Users can only see their own sessions
+    effective_user_id = auth_user_id
     if user_id:
         try:
             user_uuid = uuid.UUID(user_id)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid user_id format")
-    
+        if str(user_uuid) != auth_user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        effective_user_id = str(user_uuid)
+
+    user_uuid = uuid.UUID(effective_user_id)
     sessions = session_service.list_active_sessions(user_uuid)
-    
+
     return {
         "count": len(sessions),
         "sessions": [s.to_dict() for s in sessions]
     }
 
 @router.get("/conversations/{conversation_id}")
-async def get_conversation(conversation_id: str):
+async def get_conversation(
+    conversation_id: str,
+    auth_user_id: str = Depends(require_auth),
+):
     """Get a specific conversation with metadata"""
     try:
         conv_uuid = uuid.UUID(conversation_id)
@@ -780,7 +811,11 @@ async def get_conversation(conversation_id: str):
         
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
-        
+
+        # Ownership check
+        if str(conversation.user_id) != auth_user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
         # Get note count
         note_count = session.exec(
             select(LearningNotes).where(LearningNotes.conversation_id == conv_uuid)
@@ -799,7 +834,10 @@ async def get_conversation(conversation_id: str):
 
 
 @router.get("/conversations/{conversation_id}/summary")
-async def get_conversation_summary(conversation_id: str):
+async def get_conversation_summary(
+    conversation_id: str,
+    auth_user_id: str = Depends(require_auth),
+):
     """Return the most recent stored summary + highlights for a conversation."""
     try:
         conv_uuid = uuid.UUID(conversation_id)
@@ -816,6 +854,10 @@ async def get_conversation_summary(conversation_id: str):
             if not conversation:
                 logger.warning(f"Summary requested for non-existent conversation: {conversation_id}")
                 raise HTTPException(status_code=404, detail="Conversation not found")
+
+            # Ownership check
+            if str(conversation.user_id) != auth_user_id:
+                raise HTTPException(status_code=403, detail="Access denied")
 
             record = session.exec(
                 select(SessionSummaries)
@@ -874,7 +916,8 @@ async def get_conversation_summary(conversation_id: str):
 @router.get("/conversations/{conversation_id}/analysis")
 async def get_conversation_analysis(
     conversation_id: str,
-    limit: Optional[int] = Query(default=50, ge=1, le=500)
+    limit: Optional[int] = Query(default=50, ge=1, le=500),
+    auth_user_id: str = Depends(require_auth),
 ):
     """Get learning notes (analysis) for a specific conversation"""
     try:
@@ -893,7 +936,11 @@ async def get_conversation_analysis(
         
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
-        
+
+        # Ownership check
+        if str(conversation.user_id) != auth_user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
         # Get learning notes
         notes = session.exec(
             select(LearningNotes)
@@ -923,13 +970,18 @@ async def get_conversation_analysis(
 @router.get("/users/{user_id}/conversations")
 async def get_user_conversations(
     user_id: str,
-    limit: Optional[int] = Query(default=10, ge=1, le=100)
+    limit: Optional[int] = Query(default=10, ge=1, le=100),
+    auth_user_id: str = Depends(require_auth),
 ):
     """Get all conversations for a specific user"""
     try:
         user_uuid = uuid.UUID(user_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid user_id format")
+
+    # Ownership check — users can only list their own conversations
+    if str(user_uuid) != auth_user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     
     from sqlmodel import select, desc, func
     from models.db_models import Conversations, LearningNotes
@@ -969,7 +1021,10 @@ async def get_user_conversations(
 
 
 @router.post("/translate")
-async def translate_text(request: TranslationRequest):
+async def translate_text(
+    request: TranslationRequest,
+    auth_user_id: str = Depends(require_auth),
+):
     """
     Translate tutor text into the requested language for SOS help.
 

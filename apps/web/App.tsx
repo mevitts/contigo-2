@@ -75,9 +75,6 @@ const DEFAULT_PREFERENCES: { difficulty: DifficultyLevel; adaptive: boolean } = 
 
 const USER_STORAGE_KEY = "contigo:user";
 
-//console.log('dev mode?', import.meta.env.VITE_CONTIGO_DEVELOPER_MODE, appConfig);
-//console.log('config', appConfig.developerMode, appConfig.devUserProfile);
-
 function loadStoredUser(): UserProfile | null {
   if (typeof window === "undefined") {
     return null;

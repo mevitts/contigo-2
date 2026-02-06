@@ -551,7 +551,12 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                 
                 if message["type"] == "audio":
                     audio_data = message["data"]
-                    logger.debug(f"Received audio chunk from frontend, size: {len(audio_data) if audio_data else 0}")
+                    # Reject oversized audio chunks to prevent DoS
+                    chunk_size = len(audio_data) if audio_data else 0
+                    if chunk_size > settings.MAX_AUDIO_CHUNK_BYTES:
+                        logger.warning(f"Audio chunk too large ({chunk_size} bytes), dropping")
+                        continue
+                    logger.debug(f"Received audio chunk from frontend, size: {chunk_size}")
                     self.last_user_audio_ts = time.monotonic()
                     self._cancel_keepalive()
 

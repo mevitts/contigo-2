@@ -7,18 +7,21 @@ let currentEnvSnapshot: EnvSnapshot = runtimeEnv;
 const loggedResolutions = new Set<string>();
 
 function logResolution(key: string, source: string, value?: string): void {
+  if (typeof import.meta !== 'undefined' && !(import.meta as any).env?.DEV) return;
   const token = `${key}:${source}`;
   if (loggedResolutions.has(token)) {
     return;
   }
   loggedResolutions.add(token);
-  console.log('[config] resolve', { key, source, value });
+  console.log('[config] resolve', { key, source });
 }
 
 function setEnvSnapshot(env?: Record<string, string | undefined>): void {
   currentEnvSnapshot = env;
   const keys = env ? Object.keys(env) : [];
-  console.log('[config] env snapshot applied', { keys, hasApiBase: Boolean(env?.VITE_CONTIGO_API_BASE_URL) });
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.DEV) {
+    console.log('[config] env snapshot applied', { keys: keys.length });
+  }
 }
 
 function readFromImportMeta(key: string): string | undefined {
@@ -140,7 +143,7 @@ function buildAppConfig(): AppConfig {
   const defaultAgentId = resolveSetting('CONTIGO_AGENT_ID', 'demo-agent');
   const defaultAgentName = resolveSetting('CONTIGO_AGENT_NAME', 'Demo Agent');
   const defaultLanguage = resolveSetting('CONTIGO_DEFAULT_LANGUAGE', 'es');
-  const demoAuthCode = resolveSetting('CONTIGO_DEMO_AUTH_CODE', 'DEMO_CODE_123');
+  const demoAuthCode = resolveSetting('CONTIGO_DEMO_AUTH_CODE', '');
   const developerMode = resolveBooleanSetting('CONTIGO_DEVELOPER_MODE', false);
 
   const devUserId = resolveSetting('CONTIGO_DEV_USER_ID');
@@ -191,12 +194,9 @@ export function initializeAppConfigFromEnv(env?: Record<string, string | undefin
 
   setEnvSnapshot(resolvedEnv);
   refreshAppConfig();
-  console.log('[config] appConfig snapshot', {
-    apiBaseUrl: appConfig.apiBaseUrl,
-    translationServiceUrl: appConfig.translationServiceUrl,
-    developerMode: appConfig.developerMode,
-    devUserProfile: appConfig.devUserProfile,
-  });
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.DEV) {
+    console.log('[config] appConfig refreshed', { apiBaseUrl: appConfig.apiBaseUrl });
+  }
 }
 
 export function updateAppConfig(partial: Partial<AppConfig>): void {

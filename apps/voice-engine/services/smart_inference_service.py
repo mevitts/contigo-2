@@ -3,6 +3,7 @@ SmartInference API Service
 """
 import logging
 from typing import Dict, Any
+import httpx
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,8 @@ class SmartInferenceService:
             Only API key is needed.
         """
         self.api_key = api_key or settings.SMART_INFERENCE_API_KEY
-        
+        self.url = settings.SMART_INFERENCE_API_URL if hasattr(settings, 'SMART_INFERENCE_API_URL') else ""
+
         # Warn if not configured
         if not self.api_key:
             logger.warning("SMART_INFERENCE_API_KEY not configured - will use mock analysis")
@@ -55,8 +57,8 @@ class SmartInferenceService:
             httpx.RequestError: If the request fails
             ValueError: If the response schema is invalid
         """
-        if not self.url:
-            logger.warning("SmartInference URL not configured - returning mock analysis")
+        if not self.api_key:
+            logger.warning("SmartInference API key not configured - returning mock analysis")
             return {
                 "note_type": "GRAMMAR",
                 "priority": 2,

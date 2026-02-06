@@ -12,12 +12,10 @@ function getDbPool(env: DbEnv): PoolType {
     throw new Error('VULTR_DB_CONNECTION_STRING is not defined in the environment.');
   }
   if (!dbPool) {
+    const isProduction = process.env.ENVIRONMENT === 'production';
     dbPool = new Pool({
       connectionString: env.VULTR_DB_CONNECTION_STRING,
-      // You might want to add SSL options here for production
-      // ssl: {
-      //   rejectUnauthorized: false // Adjust as needed for your specific SSL setup
-      // }
+      ssl: isProduction ? { rejectUnauthorized: true } : undefined,
     });
     // Add an error listener to the pool
     dbPool.on('error', (err: Error) => {

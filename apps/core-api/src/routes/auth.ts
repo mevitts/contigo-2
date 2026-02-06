@@ -47,7 +47,8 @@ auth.get('/login', async (c) => {
   const url = new URL(c.req.url);
   const redirectTarget = sanitizeRedirectTarget(
     url.searchParams.get('redirect'),
-    c.env.FRONTEND_APP_URL || 'http://localhost:5173'
+    c.env.FRONTEND_APP_URL || 'http://localhost:5173',
+    c.env.FRONTEND_APP_URL,
   );
   const provider = 'google';
   
@@ -116,7 +117,8 @@ auth.get('/callback', async (c) => {
   const wantsJson = wantsJsonResponse(c.req.raw, url); // c.req.raw is the underlying Request object
   const redirectTarget = sanitizeRedirectTarget(
     state ? decodeURIComponent(state) : undefined,
-    c.env.FRONTEND_APP_URL || 'http://localhost:5173'
+    c.env.FRONTEND_APP_URL || 'http://localhost:5173',
+    c.env.FRONTEND_APP_URL,
   );
   
   if (!code) {
@@ -243,12 +245,11 @@ auth.get('/callback', async (c) => {
     if (wantsJson) {
       return c.json({
         error: 'Authentication failed',
-        message: error instanceof Error ? error.message : 'Unknown error'
       }, 401);
     }
     const destination = buildRedirectUrl(redirectTarget, {
       auth: 'error',
-      message: error instanceof Error ? error.message : 'auth_failed'
+      message: 'auth_failed'
     });
     return c.redirect(destination, 302);
   }

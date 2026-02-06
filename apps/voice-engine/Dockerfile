@@ -15,6 +15,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
+# Run as non-root user
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+RUN chown -R appuser:appgroup /app
+USER appuser
+
 # Expose the port the app runs on
 EXPOSE 8000
 

@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { secureHeaders } from 'hono/secure-headers';
 import type { Context, Env } from 'hono';
 import auth from './routes/auth.js';
 import sessions from './routes/sessions.js';
@@ -9,7 +10,7 @@ import sessionToken from './routes/session-token.js';
 import learningNotes from './routes/learning-notes.js';
 import { loadConfig } from './config.js';
 import authMiddleware from './middleware/authMiddleware.js';
-import rateLimiter from './middleware/rateLimiter.js'; // Import rateLimiter
+import rateLimiter from './middleware/rateLimiter.js';
 import type { AppBindings } from './types.js';
 import type { DbEnv } from './services/auth_service.js';
 
@@ -24,6 +25,9 @@ const corsOrigins = config.CORS_ALLOWED_ORIGINS
   .split(',')
   .map(origin => origin.trim())
   .filter(Boolean);
+
+// Security headers (X-Content-Type-Options, X-Frame-Options, etc.)
+app.use('*', secureHeaders());
 
 // CORS middleware - origins configurable via CORS_ALLOWED_ORIGINS env var
 app.use('/*', cors({
@@ -43,6 +47,10 @@ app.get('/healthz', (c) => {
   return c.text('OK');
 });
 
+// Rate limit unauthenticated endpoints (login/callback brute-force protection)
+app.use('/auth/*', rateLimiter({ windowMs: 15 * 60 * 1000, max: 20 }));
+app.use('/v1/session-token/*', rateLimiter({ windowMs: 60 * 1000, max: 30 }));
+
 // Routes that do not require authentication
 app.route('/auth', auth);
 app.route('/v1/session-token', sessionToken);
@@ -51,7 +59,7 @@ app.route('/v1/session-token', sessionToken);
 app.use('*', authMiddleware);
 
 // Apply rateLimiter to all authenticated routes (after authMiddleware)
-app.use('*', rateLimiter({ windowMs: 60 * 1000, max: 100 })); // 100 requests per minute
+app.use('*', rateLimiter({ windowMs: 60 * 1000, max: 100 }));
 
 // Routes that require authentication
 app.route('/sessions', sessions);

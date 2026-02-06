@@ -1,15 +1,42 @@
 import { Hono } from 'hono';
 import type { DbEnv } from '../services/auth_service.js';
+import { query } from '../db/db_service.js';
 import * as jose from 'jose';
 
 const sessionToken = new Hono<{ Bindings: DbEnv }>();
 
-// Placeholder for user credit verification (to be implemented)
+// Max sessions per user per rolling 24-hour window (configurable via env)
+const MAX_DAILY_SESSIONS = parseInt(process.env.MAX_DAILY_SESSIONS || '50', 10);
+
+/**
+ * Verify user has remaining session credits.
+ * Checks that the user exists and hasn't exceeded the daily session limit.
+ */
 async function verifyUserCredits(env: DbEnv, userId: string): Promise<boolean> {
-  // TODO: Implement actual credit verification using DB or external service
-  console.log(`Verifying credits for user: ${userId}`);
-  // For now, always return true for demo purposes
-  return true;
+  try {
+    // 1. Check user exists
+    const users = await query(env,
+      `SELECT id FROM users WHERE id = $1::uuid LIMIT 1`,
+      [userId],
+    );
+    if (users.length === 0) {
+      return false;
+    }
+
+    // 2. Count sessions in last 24 hours
+    const result = await query<{ count: string }>(env,
+      `SELECT COUNT(*) as count FROM conversations
+       WHERE user_id = $1::uuid AND start_time > NOW() - INTERVAL '24 hours'`,
+      [userId],
+    );
+    const sessionCount = parseInt(result[0]?.count ?? '0', 10);
+    return sessionCount < MAX_DAILY_SESSIONS;
+  } catch (err) {
+    console.error('Credit verification query failed:', err);
+    // Fail-open for now so existing users aren't blocked by a DB blip.
+    // Switch to fail-closed (return false) once the feature is battle-tested.
+    return true;
+  }
 }
 
 /**
@@ -54,7 +81,6 @@ sessionToken.post('/', async (c) => {
     console.error('Error generating session token:', error);
     return c.json({
       error: 'Failed to generate session token',
-      message: error instanceof Error ? error.message : 'Unknown error'
     }, 500);
   }
 });
