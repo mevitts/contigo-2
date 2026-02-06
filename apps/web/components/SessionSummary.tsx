@@ -1,5 +1,5 @@
 import React from "react";
-import { Save, Trash2, RefreshCw, BookOpen, AlertTriangle } from "lucide-react";
+import { Save, Trash2, RefreshCw, BookOpen, Target } from "lucide-react";
 import { motion } from "motion/react";
 import type { SessionRecord, SessionSummaryDetails, SessionHighlights } from "../lib/types";
 import { getSessionSummary } from "../lib/api";
@@ -257,10 +257,10 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
 
             <section className="rounded-2xl border border-black/5 bg-white/95 p-5 space-y-5">
               {errorInsights.length > 0 && (
-                <div className="rounded-2xl border border-rose-200 bg-[#fff0f0] p-4 shadow-[0_12px_30px_rgba(225,29,72,0.08)]">
-                  <div className="flex items-center gap-2 text-rose-600">
-                    <AlertTriangle size={18} />
-                    <p className="text-[11px] font-bold uppercase tracking-[0.35em]">Notable Errors</p>
+                <div className="rounded-2xl border border-violet-200 bg-[#f8f5ff] p-4 shadow-[0_12px_30px_rgba(124,58,237,0.08)]">
+                  <div className="flex items-center gap-2 text-violet-600">
+                    <Target size={18} />
+                    <p className="text-[11px] font-bold uppercase tracking-[0.35em]">Areas to Practice</p>
                   </div>
                   <ul className="mt-3 space-y-2 text-sm text-textMain">
                     {errorInsights.map((insight, idx) => (

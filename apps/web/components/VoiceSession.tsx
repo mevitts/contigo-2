@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Mic, MicOff, HelpCircle, Eye, EyeOff } from "lucide-react";
+import { X, Mic, MicOff, HelpCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import type { SessionRecord } from "../lib/types";
 import { translateText } from "../lib/api";
@@ -94,11 +94,12 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
     },
   ]);
   const [showTranscript, setShowTranscript] = React.useState(false);
-  const [sosMode, setSosMode] = React.useState(false);
   const [isSpeaking, setIsSpeaking] = React.useState(false);
   const [helpTranslation, setHelpTranslation] = React.useState<string | null>(null);
   const [helpLoading, setHelpLoading] = React.useState(false);
   const [helpError, setHelpError] = React.useState<string | null>(null);
+  const [nudgeTip, setNudgeTip] = React.useState<string | null>(null);
+  const nudgeTimeoutRef = React.useRef<number>();
 
   const wsRef = React.useRef<WebSocket | null>(null);
   const micStreamRef = React.useRef<MediaStream | null>(null);
@@ -115,7 +116,6 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
   const timerRef = React.useRef<number>();
   const helpRequestIdRef = React.useRef(0);
   const lastTranslatedTextRef = React.useRef<string>("");
-  const autoDismissTimeoutRef = React.useRef<number>();
 
   const lastTutorMessage = React.useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -170,13 +170,7 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
       },
     ]);
     setElapsedSeconds(0);
-    setSosMode(false);
   }, [session.id, session.topic]);
-
-  // Toggle translation helper mode
-  const handleSosToggle = React.useCallback(() => {
-    setSosMode((prev) => !prev);
-  }, []);
 
   React.useEffect(() => {
     isMutedRef.current = isMuted;
@@ -338,20 +332,23 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
       if (timerRef.current) {
         window.clearInterval(timerRef.current);
       }
-      if (autoDismissTimeoutRef.current) {
-        window.clearTimeout(autoDismissTimeoutRef.current);
+      if (nudgeTimeoutRef.current) {
+        window.clearTimeout(nudgeTimeoutRef.current);
       }
     };
   }, [cleanupTransport]);
 
-  // Auto-fetch translation when sosMode is on and there's a new tutor message
-  // Uses local OPUS-MT model (no API limits) - stays visible until user dismisses
+  // Auto-fetch translation when transcript is visible and a translation was already shown
+  // (re-translate on new tutor message so user doesn't have to keep clicking)
+  const hadTranslationRef = React.useRef(false);
   React.useEffect(() => {
-    if (!sosMode) {
-      lastTranslatedTextRef.current = "";
-      setHelpTranslation(null);
-      setHelpError(null);
-      setHelpLoading(false);
+    if (helpTranslation) {
+      hadTranslationRef.current = true;
+    }
+  }, [helpTranslation]);
+
+  React.useEffect(() => {
+    if (!showTranscript || !hadTranslationRef.current) {
       return;
     }
 
@@ -369,9 +366,8 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
       return;
     }
 
-    // Fetch the translation - no auto-dismiss since local model has no limits
     fetchHelpTranslation(normalized, { force: true });
-  }, [sosMode, lastTutorText, fetchHelpTranslation, helpTranslation]);
+  }, [showTranscript, lastTutorText, fetchHelpTranslation, helpTranslation]);
 
   const enqueueAudioPlayback = React.useCallback((base64: string, mime?: string) => {
     if (!base64) {
@@ -500,6 +496,18 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
           }
           break;
         case "guidance_nudge":
+          if (typeof payload.tip === "string" && payload.tip.trim()) {
+            setNudgeTip(payload.tip);
+            if (nudgeTimeoutRef.current) {
+              window.clearTimeout(nudgeTimeoutRef.current);
+            }
+            nudgeTimeoutRef.current = window.setTimeout(() => {
+              if (isMountedRef.current) {
+                setNudgeTip(null);
+              }
+              nudgeTimeoutRef.current = undefined;
+            }, 8000);
+          }
           break;
         default:
           break;
@@ -578,19 +586,37 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
     });
   }, [sendMessage]);
 
+  // Stable ref for the websocketUrl so the effect only re-runs when the URL truly changes
+  const wsUrlRef = React.useRef(websocketUrl);
+  wsUrlRef.current = websocketUrl;
+
+  // Stable refs for callbacks to avoid re-running the WebSocket effect on callback identity changes
+  const onConnectionErrorRef = React.useRef(onConnectionError);
+  onConnectionErrorRef.current = onConnectionError;
+  const startMicrophoneRef = React.useRef(startMicrophone);
+  startMicrophoneRef.current = startMicrophone;
+  const handleIncomingRef = React.useRef(handleIncoming);
+  handleIncomingRef.current = handleIncoming;
+
   React.useEffect(() => {
     let cancelled = false;
+    const url = wsUrlRef.current;
 
-    if (!websocketUrl) {
+    if (!url) {
       setConnectionStatus("error");
-      onConnectionError?.("Voice connection unavailable.");
+      onConnectionErrorRef.current?.("Voice connection unavailable.");
+      return;
+    }
+
+    // Guard: if a WebSocket is already open/connecting, skip (handles StrictMode double-mount)
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
     isEndingRef.current = false;
     setConnectionStatus("connecting");
 
-    const ws = new WebSocket(websocketUrl);
+    const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = async () => {
@@ -601,10 +627,10 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
       setConnectionStatus("connected");
 
       try {
-        await startMicrophone();
+        await startMicrophoneRef.current();
       } catch (error) {
         const message = error instanceof Error ? error.message : "Microphone unavailable.";
-        onConnectionError?.(message);
+        onConnectionErrorRef.current?.(message);
         setConnectionStatus("error");
         cleanupTransport({ notifyServer: true, markEnding: true });
       }
@@ -617,7 +643,7 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
 
       try {
         const payload = JSON.parse(event.data);
-        handleIncoming(payload);
+        handleIncomingRef.current(payload);
       } catch (parseError) {
         console.error("Failed to parse voice payload", parseError);
       }
@@ -629,7 +655,7 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
       }
 
       setConnectionStatus("error");
-      onConnectionError?.("Voice connection encountered an error.");
+      onConnectionErrorRef.current?.("Voice connection encountered an error.");
       cleanupTransport({ markEnding: true });
     };
 
@@ -648,7 +674,7 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
 
       if (!cancelled && !isEndingRef.current && isMountedRef.current) {
         setConnectionStatus("error");
-        onConnectionError?.("Voice connection closed.");
+        onConnectionErrorRef.current?.("Voice connection closed.");
       }
     };
 
@@ -659,14 +685,9 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
         setConnectionStatus("idle");
       }
     };
-  }, [
-    websocketUrl,
-    onConnectionError,
-    startMicrophone,
-    cleanupTransport,
-    handleIncoming,
-    cleanupMedia,
-  ]);
+    // Only re-run when the WebSocket URL actually changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [websocketUrl]);
 
   const handleEndSession = React.useCallback(() => {
     cleanupTransport({ notifyServer: true, markEnding: true });
@@ -701,7 +722,7 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
           </button>
           <div className="flex flex-col">
             <span className="text-xs font-bold uppercase tracking-widest text-gray-400">
-              {sosMode ? "Helper Mode" : "En Vivo"}
+              En Vivo
             </span>
             <span className="font-serif text-xl text-textMain">{formatTimer(elapsedSeconds)}</span>
             <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-gray-400">
@@ -713,16 +734,7 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
           </div>
         </div>
 
-        <button
-          onClick={handleSosToggle}
-          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-            sosMode
-              ? "bg-yellow text-textMain shadow-md"
-              : "bg-white border-2 border-gray-200 text-gray-400 hover:border-yellow hover:text-yellow"
-          }`}
-        >
-          <HelpCircle size={20} />
-        </button>
+        <div className="w-10" />
       </div>
 
       <div className="flex-1 relative flex items-center justify-center z-10">
@@ -758,62 +770,42 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
       </div>
 
       <div className="relative z-20 px-6 pb-12 space-y-8 max-w-2xl mx-auto w-full">
-        {sosMode && (
+        {/* Coaching nudge banner */}
+        {nudgeTip && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-yellow px-6 py-4 rounded-2xl shadow-lg mx-4"
+            className="flex items-center justify-center"
           >
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-[0.4em] text-textMain">
-                <span>English meaning</span>
-                <button
-                  type="button"
-                  onClick={() => fetchHelpTranslation(lastTutorText, { force: true })}
-                  disabled={helpLoading || !lastTutorText.trim()}
-                  className={`text-[10px] tracking-[0.3em] transition-colors underline-offset-4 ${
-                    helpLoading || !lastTutorText.trim()
-                      ? "text-textMain/30 cursor-not-allowed"
-                      : "text-textMain hover:text-textMain/70"
-                  }`}
-                >
-                  Refresh
-                </button>
-              </div>
-
-              <div className="rounded-2xl border border-white/60 bg-white/80 p-4 shadow-inner">
-                {helpLoading && (
-                  <p className="text-sm font-sans text-textMain">Translating your tutor's sentence...</p>
-                )}
-
-                {!helpLoading && helpError && (
-                  <p className="text-sm font-sans text-red-700">{helpError}</p>
-                )}
-
-                {!helpLoading && !helpError && helpTranslation && (
-                  <p className="text-lg font-serif text-textMain">{helpTranslation}</p>
-                )}
-
-                {!helpLoading && !helpError && !helpTranslation && (
-                  <p className="text-sm font-sans text-textMain">
-                    We’ll drop the English translation here as soon as your tutor says their next sentence.
-                  </p>
-                )}
-              </div>
-
-              {lastTutorText && (
-                <div className="rounded-2xl border border-yellow/40 bg-yellow/20 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-yellow-900 mb-1">
-                    Spanish original
-                  </p>
-                  <p className="text-sm italic text-yellow-900/90">{lastTutorText}</p>
-                </div>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => setNudgeTip(null)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-sm font-sans shadow-sm"
+            >
+              <span className="text-amber-500 font-bold text-xs uppercase tracking-widest">Tip</span>
+              <span>{nudgeTip}</span>
+              <X size={14} className="text-amber-400 ml-1" />
+            </button>
           </motion.div>
         )}
 
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-5">
+          {/* Translation appears above when triggered */}
+          {showTranscript && helpTranslation && (
+            <motion.p
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-sans italic text-sky-600 leading-relaxed pt-2"
+            >
+              {helpTranslation}
+            </motion.p>
+          )}
+
+          {showTranscript && helpError && (
+            <p className="text-sm font-sans text-red-500">{helpError}</p>
+          )}
+
+          {/* Spanish text (blurred/revealed) */}
           <button
             type="button"
             className="relative group w-full focus:outline-none"
@@ -824,14 +816,40 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
                 showTranscript ? "opacity-100 blur-none" : "opacity-20 blur-md"
               }`}
             >
-              "{lastMessage?.text}"
+              &ldquo;{lastMessage?.text}&rdquo;
             </p>
 
             <div className="mt-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
               {showTranscript ? <Eye size={14} /> : <EyeOff size={14} />}
-              <span>{showTranscript ? "Hide transcript" : "Tap to reveal"}</span>
+              <span>{showTranscript ? "Hide captions" : "Show captions"}</span>
             </div>
           </button>
+
+          {/* Translate button appears after reveal */}
+          {showTranscript && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (helpTranslation) {
+                    setHelpTranslation(null);
+                    lastTranslatedTextRef.current = "";
+                  } else {
+                    fetchHelpTranslation(lastTutorText, { force: true });
+                  }
+                }}
+                disabled={helpLoading}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold uppercase tracking-widest bg-sky-50 border-2 border-sky-200 text-sky-600 hover:bg-sky-100 hover:border-sky-400 transition-colors disabled:opacity-50 shadow-sm"
+              >
+                {helpLoading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <HelpCircle size={16} />
+                )}
+                <span>{helpTranslation ? "Hide translation" : "Translate"}</span>
+              </button>
+            </motion.div>
+          )}
         </div>
 
         <div className="flex justify-center gap-6">

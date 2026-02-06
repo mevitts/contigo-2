@@ -55,14 +55,13 @@ def _init_genai():
     global genai, types
     if genai is None:
         try:
-            import google.generativeai as _genai
-            from google.generativeai import types as _types
+            from google import genai as _genai
+            from google.genai import types as _types
             genai = _genai
             types = _types
-            genai.configure(api_key=settings.GEMINI_API_KEY)
             logger.info("Gemini SDK initialized successfully")
         except ImportError as e:
-            logger.error(f"Failed to import google-generativeai: {e}")
+            logger.error(f"Failed to import google-genai: {e}")
             raise
 
 

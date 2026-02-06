@@ -35,7 +35,7 @@ type AppView =
 
 type DifficultyLevel = "beginner" | "intermediate" | "advanced";
 
-const PREMIUM_LIMIT_FALLBACK_MINUTES = 5;
+const PREMIUM_LIMIT_FALLBACK_MINUTES = 3;
 
 const premiumPlanOptions: PremiumPlanOption[] = [
   {

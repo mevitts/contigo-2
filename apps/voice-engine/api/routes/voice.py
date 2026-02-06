@@ -416,6 +416,24 @@ def _build_dynamic_variables_payload(
         _stringify_list(continuity_context.get("highlight_personal"), "highlight_personal")
         _stringify_list(continuity_context.get("highlight_spanish"), "highlight_spanish")
 
+    # Build a personalized greeting prompt from continuity data
+    if continuity_context:
+        personal_callbacks = continuity_context.get("highlight_personal") or []
+        notable_moments = continuity_context.get("highlight_notable") or []
+        starters = personal_callbacks + notable_moments
+        topic = continuity_context.get("topic")
+        if starters:
+            payload["greeting_prompt"] = (
+                f"Open by referencing something personal from last time: '{starters[0]}'. "
+                "Make it feel like catching up with a friend who remembers them."
+            )
+        elif topic:
+            payload["greeting_prompt"] = (
+                f"Welcome them back warmly and reference your last conversation about '{topic}'."
+            )
+    if "greeting_prompt" not in payload:
+        payload["greeting_prompt"] = "Greet the learner warmly and ask what they'd like to talk about today."
+
     if memory_snippets:
         payload["memory_snippets"] = " | ".join(memory_snippets[:5])
 
@@ -567,6 +585,7 @@ async def voice_session(
 
         # Enhanced logging for context exchange debugging
         if continuity_context:
+            logger.info(f"Session continuity context: {json.dumps(continuity_context, default=str)[:1000]}")
             logger.info(
                 "Session continuity context loaded",
                 extra={

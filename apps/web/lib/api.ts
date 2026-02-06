@@ -194,7 +194,7 @@ export async function authenticateDemoUser(code = appConfig.demoAuthCode): Promi
         connectionType: 'demo',
         demoMode: true,
         membershipTier: 'demo',
-        maxConversationMinutes: 5,
+        maxConversationMinutes: 3,
       };
     }
 

@@ -107,7 +107,10 @@ class CerebrasService:
                 )
                 raise
             result = response.json()
-            return result["choices"][0]["message"]["content"]
+            content = result["choices"][0]["message"]["content"]
+            # Strip <think>...</think> reasoning blocks that some models emit
+            content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+            return content
 
     async def analyze_conversation(
         self,
