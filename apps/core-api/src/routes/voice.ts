@@ -4,7 +4,7 @@ import * as jose from 'jose';
 import type { DbEnv } from '../services/auth_service.js';
 import { loadSessionMetadata, parseAdaptiveFlag } from '../services/voice_service.js';
 
-const voice = new Hono<{ Bindings: DbEnv }>();
+const voice = new Hono<{ Bindings: DbEnv; Variables: { userId: string } }>();
 
 // Validation schemas
 const WebsocketUrlQuerySchema = z.object({

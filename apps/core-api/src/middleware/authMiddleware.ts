@@ -38,7 +38,7 @@ const authMiddleware = createMiddleware<MiddlewareEnv>(async (c, next) => {
     }
 
     // Production JWT validation using VOICE_ENGINE_SECRET (shared HMAC secret)
-    const secret = c.env.VOICE_ENGINE_SECRET;
+    const secret = config?.VOICE_ENGINE_SECRET;
     if (secret) {
       try {
         const secretKey = new TextEncoder().encode(secret);

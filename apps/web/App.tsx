@@ -627,7 +627,6 @@ export default function App() {
               user={user}
               onLogout={handleLogout}
               difficulty={difficultyPreference}
-              adaptiveMode={adaptivePreference}
               extraSupportMode={extraSupportMode}
               onDifficultyChange={handleDifficultyChange}
               onExtraSupportChange={handleExtraSupportChange}

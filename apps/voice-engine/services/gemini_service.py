@@ -111,9 +111,13 @@ class GeminiService:
         level_enum = self.THINKING_LEVELS.get(level.lower(), "MEDIUM")
 
         _init_genai()
-        return types.ThinkingConfig(
-            thinking_level=getattr(types.ThinkingLevel, level_enum)
-        )
+        if hasattr(types, "ThinkingLevel"):
+            return types.ThinkingConfig(
+                thinking_level=getattr(types.ThinkingLevel, level_enum)
+            )
+        # Fallback for older SDK versions without ThinkingLevel enum
+        budget_map = {"MINIMAL": 1024, "LOW": 2048, "MEDIUM": 4096, "HIGH": 8192}
+        return types.ThinkingConfig(thinking_budget=budget_map.get(level_enum, 4096))
 
     def _get_or_create_chat(self, conversation_id: str, system_instruction: str = None):
         """Get or create a chat session for continuity."""
@@ -162,7 +166,7 @@ class GeminiService:
             - note_type: CLUSTER | GRAMMAR | VOCAB | FLUENCY
             - priority: 1-3 priority level
             - error_category: Short label for the issue
-            - suggestion: Brief coaching tip
+            - suggestion: Learner-facing practice tip (shown in session summary)
             - guidance: Instruction for tutor adaptation
             - thought_summary: Summary of model's reasoning (if available)
         """
@@ -195,12 +199,13 @@ Respond ONLY with valid JSON:
   "note_type": "CLUSTER" | "GRAMMAR" | "VOCAB" | "FLUENCY",
   "priority": 1-3,
   "error_category": "short label",
-  "suggestion": "brief coaching tip",
+  "suggestion": "learner-facing practice tip — written directly TO the student, e.g. 'Try expanding beyond single-word answers into full sentences' NOT 'Encourage the learner to expand...' Combine related issues into one concise tip. Use a concrete example from the session when possible.",
   "guidance": "instruction for the tutor on how to adapt mid-session",
   "pattern_detected": "description of any recurring pattern across turns",
   "confidence": 0.0-1.0
 }
 
+The 'suggestion' field is shown directly to the learner in their session summary, so write it as friendly advice TO them (second person). The 'guidance' field is for the tutor AI only.
 Focus guidance on how the tutor should adjust speed, difficulty, or topic emphasis right now."""
 
         try:
@@ -539,9 +544,7 @@ Be conservative with changes - require strong evidence before recommending level
 
         _init_genai()
 
-        thinking_config = types.ThinkingConfig(
-            thinking_level=getattr(types.ThinkingLevel, self.THINKING_LEVELS.get(thinking_level, "MEDIUM"))
-        )
+        thinking_config = self._get_thinking_config(thinking_level)
 
         config = types.GenerateContentConfig(
             thinking_config=thinking_config,

@@ -6,7 +6,6 @@ interface SettingsProps {
   user: UserProfile | null;
   onLogout: () => void;
   difficulty: "beginner" | "intermediate" | "advanced";
-  adaptiveMode: boolean;
   extraSupportMode?: boolean;
   onDifficultyChange: (difficulty: "beginner" | "intermediate" | "advanced") => void;
   onExtraSupportChange?: (enabled: boolean) => void;
@@ -17,7 +16,6 @@ export function Settings({
   user,
   onLogout,
   difficulty,
-  adaptiveMode,
   extraSupportMode = false,
   onDifficultyChange,
   onExtraSupportChange,
@@ -154,19 +152,6 @@ export function Settings({
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* Adaptive Mode */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase tracking-widest text-textSoft">Adaptive Mode</label>
-                <p className="text-sm text-gray-500">Always on to auto-adjust your tutor.</p>
-              </div>
-              <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${
-                adaptiveMode ? "bg-sky text-white" : "bg-gray-200 text-gray-500"
-              }`}>
-                {adaptiveMode ? "On" : "Off"}
-              </span>
             </div>
 
             {/* Extra Support Mode (Low Beginner) */}

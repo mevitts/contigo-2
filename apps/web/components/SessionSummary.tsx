@@ -1,5 +1,5 @@
 import React from "react";
-import { Save, Trash2, RefreshCw, BookOpen, Target } from "lucide-react";
+import { Save, Trash2, RefreshCw, BookOpen, Target, X } from "lucide-react";
 import { motion } from "motion/react";
 import type { SessionRecord, SessionSummaryDetails, SessionHighlights } from "../lib/types";
 import { getSessionSummary } from "../lib/api";
@@ -161,8 +161,16 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
         transition={{ duration: 0.35, ease: "easeOut" }}
         className="mx-auto w-full max-w-4xl rounded-3xl bg-white shadow-[0_35px_120px_rgba(0,0,0,0.08)] border border-black/5"
       >
-        <div className="border-b border-black/5 px-6 py-6 md:px-10">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="border-b border-black/5 px-6 py-6 md:px-10 relative">
+          <button
+            type="button"
+            onClick={onPracticeAgain}
+            className="absolute top-4 right-4 md:top-6 md:right-6 p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-black/5 transition-colors"
+            aria-label="Close summary"
+          >
+            <X size={20} />
+          </button>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pr-10">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-500">Session recap</p>
               <h1 className="text-3xl font-serif text-textMain">{displayTopic}</h1>
