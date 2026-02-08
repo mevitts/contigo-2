@@ -150,3 +150,53 @@ export interface UpdateReferenceRequest {
   tags?: string[] | null;
   notes?: string | null;
 }
+
+// Weekly Reading Spotlight types
+
+export interface WeeklyArticle {
+  id: string;
+  url: string;
+  title: string;
+  author?: string | null;
+  sourceName?: string | null;
+  contentText?: string | null;
+  summary?: string | null;
+  keyPoints: string[];
+  imageUrl?: string | null;
+  difficultyLevel?: string | null;
+  tags: string[];
+  isActive: boolean;
+  weekStart?: string | null;
+  weekEnd?: string | null;
+  createdAt: string;
+}
+
+export interface ArticleVocabItem {
+  word: string;
+  translation: string;
+  context?: string;
+  levelNote?: string;
+}
+
+export interface ArticleGrammarPattern {
+  pattern: string;
+  example: string;
+  explanation: string;
+}
+
+export interface ArticleCulturalNote {
+  topic: string;
+  explanation: string;
+  connection?: string;
+}
+
+export interface ArticleAnalysis {
+  id: string;
+  articleId: string;
+  userId: string;
+  vocabItems: ArticleVocabItem[];
+  grammarPatterns: ArticleGrammarPattern[];
+  culturalNotes: ArticleCulturalNote[];
+  personalizedTips: string[];
+  createdAt: string;
+}

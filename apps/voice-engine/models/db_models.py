@@ -109,3 +109,36 @@ class UserReferences(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     user: "Users" = Relationship(back_populates="user_references")
+
+
+class WeeklyArticles(SQLModel, table=True):
+    __tablename__: ClassVar[str] = "weekly_articles"
+
+    id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True)
+    url: str = Field(sa_column=Column(TEXT))
+    title: str = Field(sa_column=Column(TEXT))
+    author: Optional[str] = Field(default=None, sa_column=Column(TEXT))
+    source_name: Optional[str] = Field(default=None, sa_column=Column(TEXT))
+    content_text: str = Field(sa_column=Column(TEXT))
+    summary: Optional[str] = Field(default=None, sa_column=Column(TEXT))
+    key_points: Optional[str] = Field(default=None, sa_column=Column(TEXT))  # JSON array as TEXT
+    image_url: Optional[str] = Field(default=None, sa_column=Column(TEXT))
+    difficulty_level: Optional[str] = Field(default=None, sa_column=Column(TEXT))
+    tags: Optional[str] = Field(default=None, sa_column=Column(TEXT))  # JSON array as TEXT
+    is_active: bool = Field(default=True)
+    week_start: datetime = Field(default_factory=datetime.utcnow)
+    week_end: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserArticleAnalyses(SQLModel, table=True):
+    __tablename__: ClassVar[str] = "user_article_analyses"
+
+    id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True)
+    article_id: uuid.UUID = Field(foreign_key="weekly_articles.id", index=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id", index=True)
+    vocab_items: Optional[str] = Field(default=None, sa_column=Column(TEXT))  # JSON array as TEXT
+    grammar_patterns: Optional[str] = Field(default=None, sa_column=Column(TEXT))  # JSON array as TEXT
+    cultural_notes: Optional[str] = Field(default=None, sa_column=Column(TEXT))  # JSON array as TEXT
+    personalized_tips: Optional[str] = Field(default=None, sa_column=Column(TEXT))  # JSON array as TEXT
+    created_at: datetime = Field(default_factory=datetime.utcnow)

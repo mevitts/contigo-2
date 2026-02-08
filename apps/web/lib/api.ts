@@ -1,6 +1,7 @@
 import { appConfig } from './config';
 import type {
   ApiErrorShape,
+  ArticleAnalysis,
   CreateReferenceRequest,
   CreateSessionRequest,
   Reference,
@@ -10,6 +11,7 @@ import type {
   UpdateReferenceRequest,
   UserProfile,
   VoiceWebsocketInfo,
+  WeeklyArticle,
 } from './types';
 
 export class ContigoApiError extends Error {
@@ -516,4 +518,147 @@ export async function deleteReference(referenceId: string): Promise<void> {
   await apiRequest(`/v1/references/${referenceId}`, {
     method: 'DELETE',
   });
+}
+
+// Weekly Reading Spotlight API
+
+function normalizeArticle(input: any): WeeklyArticle {
+  return {
+    id: input.id ?? '',
+    url: input.url ?? '',
+    title: input.title ?? '',
+    author: input.author ?? null,
+    sourceName: input.source_name ?? input.sourceName ?? null,
+    contentText: input.content_text ?? input.contentText ?? null,
+    summary: input.summary ?? null,
+    keyPoints: Array.isArray(input.key_points ?? input.keyPoints) ? (input.key_points ?? input.keyPoints) : [],
+    imageUrl: input.image_url ?? input.imageUrl ?? null,
+    difficultyLevel: input.difficulty_level ?? input.difficultyLevel ?? null,
+    tags: Array.isArray(input.tags) ? input.tags : [],
+    isActive: Boolean(input.is_active ?? input.isActive ?? false),
+    weekStart: input.week_start ?? input.weekStart ?? null,
+    weekEnd: input.week_end ?? input.weekEnd ?? null,
+    createdAt: input.created_at ?? input.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function normalizeAnalysis(input: any): ArticleAnalysis {
+  const mapVocab = (items: any[]) =>
+    items.map((v: any) => ({
+      word: v.word ?? '',
+      translation: v.translation ?? '',
+      context: v.context ?? undefined,
+      levelNote: v.level_note ?? v.levelNote ?? undefined,
+    }));
+
+  const mapGrammar = (items: any[]) =>
+    items.map((g: any) => ({
+      pattern: g.pattern ?? '',
+      example: g.example ?? '',
+      explanation: g.explanation ?? '',
+    }));
+
+  const mapCulture = (items: any[]) =>
+    items.map((c: any) => ({
+      topic: c.topic ?? '',
+      explanation: c.explanation ?? '',
+      connection: c.connection ?? undefined,
+    }));
+
+  return {
+    id: input.id ?? '',
+    articleId: input.article_id ?? input.articleId ?? '',
+    userId: input.user_id ?? input.userId ?? '',
+    vocabItems: Array.isArray(input.vocab_items ?? input.vocabItems)
+      ? mapVocab(input.vocab_items ?? input.vocabItems)
+      : [],
+    grammarPatterns: Array.isArray(input.grammar_patterns ?? input.grammarPatterns)
+      ? mapGrammar(input.grammar_patterns ?? input.grammarPatterns)
+      : [],
+    culturalNotes: Array.isArray(input.cultural_notes ?? input.culturalNotes)
+      ? mapCulture(input.cultural_notes ?? input.culturalNotes)
+      : [],
+    personalizedTips: Array.isArray(input.personalized_tips ?? input.personalizedTips)
+      ? (input.personalized_tips ?? input.personalizedTips)
+      : [],
+    createdAt: input.created_at ?? input.createdAt ?? new Date().toISOString(),
+  };
+}
+
+export async function getCurrentSpotlight(signal?: AbortSignal): Promise<WeeklyArticle | null> {
+  try {
+    const base = appConfig.translationServiceUrl;
+    const response = await fetch(`${base}/articles/spotlight`, {
+      method: 'GET',
+      headers: JSON_HEADERS,
+      signal,
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data?.article) {
+      return null;
+    }
+
+    return normalizeArticle(data.article);
+  } catch (err) {
+    console.error('[api] spotlight fetch failed', err);
+    return null;
+  }
+}
+
+export async function getArticleDetails(articleId: string): Promise<WeeklyArticle | null> {
+  if (!articleId) {
+    return null;
+  }
+
+  try {
+    const base = appConfig.translationServiceUrl;
+    const response = await fetch(`${base}/articles/${articleId}`, {
+      method: 'GET',
+      headers: JSON_HEADERS,
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data?.article ? normalizeArticle(data.article) : null;
+  } catch (err) {
+    console.error('[api] article details fetch failed', err);
+    return null;
+  }
+}
+
+export async function getArticleAnalysis(
+  articleId: string,
+  userId: string,
+  difficulty = 'intermediate'
+): Promise<ArticleAnalysis | null> {
+  if (!articleId || !userId) {
+    return null;
+  }
+
+  try {
+    const base = appConfig.translationServiceUrl;
+    const response = await fetch(`${base}/articles/${articleId}/analyze`, {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ user_id: userId, difficulty }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data?.analysis ? normalizeAnalysis(data.analysis) : null;
+  } catch (err) {
+    console.error('[api] article analysis failed', err);
+    return null;
+  }
 }

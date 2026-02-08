@@ -615,6 +615,131 @@ If no clear references are found, return {"detected": false, "references": []}."
                 return await cerebras_service.detect_references(agent_text, user_text, model=settings.CEREBRAS_MODEL)
             return {"detected": False, "references": []}
 
+    async def generate_article_summary(
+        self,
+        title: str,
+        content_text: str,
+        model: str = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate a summary and key points for an imported article.
+
+        Returns:
+            Dictionary with summary, key_points, difficulty_level, tags
+        """
+        if not self.api_key:
+            return {
+                "summary": content_text[:300] + "...",
+                "key_points": [],
+                "difficulty_level": "intermediate",
+                "tags": [],
+            }
+
+        system_prompt = """You summarize Spanish-language articles for language learners.
+
+Return ONLY valid JSON:
+{
+  "summary": "2-3 sentence summary in English describing what the article is about",
+  "key_points": ["3-5 key takeaways as short strings"],
+  "difficulty_level": "beginner" | "intermediate" | "advanced",
+  "tags": ["3-5 topic tags like 'cultura', 'política', 'ciencia', etc."]
+}
+
+Assess difficulty based on vocabulary complexity, sentence structure, and topic abstraction."""
+
+        user_prompt = f"Title: {title}\n\nArticle text (first 3000 chars):\n{content_text[:3000]}"
+
+        try:
+            client = self._get_client()
+            if client is None:
+                return {"summary": content_text[:300], "key_points": [], "difficulty_level": "intermediate", "tags": []}
+
+            response = await self._async_generate(
+                client=client,
+                model=model or settings.GEMINI_MODEL,
+                contents=user_prompt,
+                system_instruction=system_prompt,
+                thinking_level="low",
+            )
+
+            return self._parse_json_response(response.text)
+
+        except Exception as exc:
+            logger.error(f"Gemini article summary failed: {exc}")
+            return {
+                "summary": content_text[:300] + "...",
+                "key_points": [],
+                "difficulty_level": "intermediate",
+                "tags": [],
+            }
+
+    async def analyze_article_for_user(
+        self,
+        title: str,
+        content_text: str,
+        user_difficulty: str = "intermediate",
+        model: str = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate personalized vocab, grammar, and cultural analysis of an article.
+
+        Returns:
+            Dictionary with vocab_items, grammar_patterns, cultural_notes, personalized_tips
+        """
+        if not self.api_key:
+            return {
+                "vocab_items": [],
+                "grammar_patterns": [],
+                "cultural_notes": [],
+                "personalized_tips": [],
+            }
+
+        system_prompt = f"""You are a Spanish language tutor analyzing an article for a {user_difficulty}-level learner.
+
+Return ONLY valid JSON:
+{{
+  "vocab_items": [
+    {{"word": "Spanish word/phrase", "translation": "English", "context": "sentence from article where it appears", "level_note": "why this word matters for their level"}}
+  ],
+  "grammar_patterns": [
+    {{"pattern": "grammar pattern name", "example": "example from article", "explanation": "brief explanation for learner"}}
+  ],
+  "cultural_notes": [
+    {{"topic": "cultural element", "explanation": "what learner should know", "connection": "how it connects to the article"}}
+  ],
+  "personalized_tips": [
+    "2-3 suggestions for how to use this article in their learning"
+  ]
+}}
+
+Pick 5-8 vocab items, 2-4 grammar patterns, and 1-3 cultural notes most relevant to a {user_difficulty} learner."""
+
+        user_prompt = f"Article: {title}\n\n{content_text[:4000]}"
+
+        try:
+            client = self._get_client()
+            if client is None:
+                return {"vocab_items": [], "grammar_patterns": [], "cultural_notes": [], "personalized_tips": []}
+
+            response = await self._async_generate(
+                client=client,
+                model=model or settings.GEMINI_MODEL,
+                contents=user_prompt,
+                system_instruction=system_prompt,
+                thinking_level="medium",
+            )
+
+            return self._parse_json_response(response.text)
+
+        except Exception as exc:
+            logger.error(f"Gemini article analysis failed: {exc}")
+            return {
+                "vocab_items": [],
+                "grammar_patterns": [],
+                "cultural_notes": [],
+                "personalized_tips": [],
+            }
+
     async def _async_generate(
         self,
         client,

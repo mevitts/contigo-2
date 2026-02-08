@@ -6,6 +6,7 @@ import { Settings } from "./components/Settings";
 import { SessionHistory } from "./components/SessionHistory";
 import { PreRollView } from "./components/PreRollView";
 import { ReferenceLibrary } from "./components/ReferenceLibrary";
+import { ArticleView } from "./components/ArticleView";
 import { LoginView } from "./components/LoginView";
 import { PremiumOffer, type PremiumPlanOption, type PremiumPlanId } from "./components/PremiumOffer";
 import { MockStripeCheckout } from "./components/MockStripeCheckout";
@@ -17,8 +18,9 @@ import {
   getVoiceWebsocketUrl,
   completeSession,
   ContigoApiError,
+  getCurrentSpotlight,
 } from "./lib/api";
-import type { SessionRecord, UserProfile, SessionSummaryDetails } from "./lib/types";
+import type { SessionRecord, UserProfile, SessionSummaryDetails, WeeklyArticle } from "./lib/types";
 import { appConfig } from "./lib/config";
 import { ArrowLeft } from "lucide-react";
 
@@ -33,7 +35,8 @@ type AppView =
   | "settings"
   | "premium"
   | "checkout"
-  | "library";
+  | "library"
+  | "article";
 
 type DifficultyLevel = "beginner" | "intermediate" | "advanced";
 
@@ -197,6 +200,8 @@ export default function App() {
   const [premiumContext, setPremiumContext] = React.useState<{ durationSeconds: number } | null>(null);
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlanId | null>(null);
   const [summaryCache, setSummaryCache] = React.useState<Record<string, SessionSummaryDetails>>({});
+  const [spotlightArticle, setSpotlightArticle] = React.useState<WeeklyArticle | null>(null);
+  const [activeArticle, setActiveArticle] = React.useState<WeeklyArticle | null>(null);
 
   const initialPreferences = React.useMemo(() => loadStoredPreferences(), []);
   const [difficultyPreference, setDifficultyPreference] = React.useState<DifficultyLevel>(initialPreferences.difficulty);
@@ -293,6 +298,22 @@ export default function App() {
     }
     void refreshSessions();
   }, [user?.id, refreshSessions]);
+
+  // Fetch weekly spotlight article when dashboard is shown
+  React.useEffect(() => {
+    if (view !== "dashboard" || !user?.id) return;
+
+    let cancelled = false;
+    getCurrentSpotlight().then((article) => {
+      if (!cancelled) setSpotlightArticle(article);
+    });
+    return () => { cancelled = true; };
+  }, [view, user?.id]);
+
+  const handleReadArticle = React.useCallback((article: WeeklyArticle) => {
+    setActiveArticle(article);
+    setView("article");
+  }, []);
 
   const handleStartSession = React.useCallback(async () => {
     if (!user) {
@@ -540,8 +561,8 @@ export default function App() {
     setVoiceConnectionError(message);
   }, []);
 
-  // Only show nav for history, settings, and library
-  const shouldShowNav = view === "history" || view === "settings" || view === "library";
+  // Only show nav for history, settings, library, and article
+  const shouldShowNav = view === "history" || view === "settings" || view === "library" || view === "article";
 
   return (
     <div className="min-h-screen bg-plaster text-textMain font-sans">
@@ -596,6 +617,8 @@ export default function App() {
             onGoToLibrary={() => setView("library")}
             sessions={sessions}
             isLoading={sessionsLoading || isStartingSession}
+            spotlightArticle={spotlightArticle}
+            onReadArticle={handleReadArticle}
           />
         )}
 
@@ -620,6 +643,15 @@ export default function App() {
 
         {view === "library" && user && (
           <ReferenceLibrary userId={user.id} />
+        )}
+
+        {view === "article" && user && activeArticle && (
+          <ArticleView
+            articleId={activeArticle.id}
+            userId={user.id}
+            difficulty={difficultyPreference}
+            initialArticle={activeArticle}
+          />
         )}
 
         {view === "premium" && premiumContext && (

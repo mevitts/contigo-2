@@ -1,5 +1,6 @@
 import { Mic, Globe, Book, BookOpen } from "lucide-react";
-import type { SessionRecord } from "../lib/types";
+import type { SessionRecord, WeeklyArticle } from "../lib/types";
+import { SpotlightCard } from "./SpotlightCard";
 
 interface DashboardProps {
   userName: string;
@@ -9,6 +10,8 @@ interface DashboardProps {
   onGoToLibrary?: () => void;
   sessions: SessionRecord[];
   isLoading?: boolean;
+  spotlightArticle?: WeeklyArticle | null;
+  onReadArticle?: (article: WeeklyArticle) => void;
 }
 
 const NoiseOverlay = () => (
@@ -20,7 +23,7 @@ const NoiseOverlay = () => (
   />
 );
 
-export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNotebook, onGoToLibrary, isLoading = false }: DashboardProps) {
+export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNotebook, onGoToLibrary, isLoading = false, spotlightArticle, onReadArticle }: DashboardProps) {
   return (
     <div className="min-h-screen bg-plaster font-serif animate-fade-in flex flex-col relative overflow-hidden">
       <NoiseOverlay />
@@ -75,6 +78,15 @@ export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNote
            </button>
         </div>
       </div>
+
+      {/* Weekly Spotlight */}
+      {spotlightArticle && onReadArticle && (
+        <div className="px-8 md:px-16 lg:px-24 z-10 relative mt-4 md:mt-0">
+          <div className="max-w-2xl">
+            <SpotlightCard article={spotlightArticle} onReadArticle={onReadArticle} />
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="pb-12 px-8 md:px-16 lg:px-24 z-20 mt-auto">

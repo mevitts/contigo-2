@@ -246,6 +246,12 @@ async def _collect_memory_breadcrumbs(user_id: uuid.UUID) -> List[str]:
     return breadcrumbs[:7]  # Increased to accommodate Redis insights
 
 
+def _fetch_active_weekly_article() -> Optional[dict]:
+    """Fetch the active weekly spotlight article for agent context."""
+    from services.article_service import get_active_spotlight
+    return get_active_spotlight()
+
+
 def _build_agent_custom_instructions(
     user_id: uuid.UUID,
     memory_snippets: Optional[List[str]] = None,
@@ -388,6 +394,27 @@ def _build_agent_custom_instructions(
                 "action": "pre_activated",
                 "reason": "historical_struggle"
             }
+        )
+
+    # Inject weekly article context if available
+    weekly_article = _fetch_active_weekly_article()
+    if weekly_article:
+        lines.append(
+            "\n## Weekly Reading Spotlight"
+        )
+        lines.append(
+            f"This week's featured article is \"{weekly_article['title']}\""
+            + (f" by {weekly_article['author']}" if weekly_article.get("author") else "")
+            + "."
+        )
+        if weekly_article.get("summary"):
+            lines.append(f"Summary: {weekly_article['summary']}")
+        if weekly_article.get("key_points"):
+            points = weekly_article["key_points"][:3]
+            lines.append("Key points: " + "; ".join(points))
+        lines.append(
+            "If the learner mentions the article or wants to discuss it, engage enthusiastically. "
+            "Use vocabulary and themes from the article naturally in conversation when relevant."
         )
 
     lines.append("Keep the energy positive, collaborative, and human.")

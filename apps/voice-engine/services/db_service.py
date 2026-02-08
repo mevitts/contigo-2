@@ -3,7 +3,7 @@ import uuid
 from sqlmodel import SQLModel, create_engine, Session
 from config.settings import settings
 from config.logging_config import get_db_logger
-from models.db_models import LearningNotes, SessionSummaries, NoteType
+from models.db_models import LearningNotes, SessionSummaries, NoteType, WeeklyArticles, UserArticleAnalyses
 
 logger = get_db_logger()
 
