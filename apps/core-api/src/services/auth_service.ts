@@ -30,7 +30,13 @@ export const hasGoogleConfig = (env: AppEnv) => Boolean(
   env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI
 );
 
-export const DEMO_MODE_ENABLED = (env: AppEnv) => env.FORCE_DEMO_AUTH === 'true' || !hasGoogleConfig(env);
+export const DEMO_MODE_ENABLED = (env: AppEnv) => {
+  if (env.ENVIRONMENT === 'production') {
+    // Never allow demo mode in production — require Google OAuth
+    return false;
+  }
+  return env.FORCE_DEMO_AUTH === 'true' || !hasGoogleConfig(env);
+};
 
 export function wantsJsonResponse(request: Request, url: URL): boolean {
   const format = (url.searchParams.get('format') || '').toLowerCase();
@@ -41,14 +47,31 @@ export function wantsJsonResponse(request: Request, url: URL): boolean {
   return accept.includes('application/json');
 }
 
-export function sanitizeRedirectTarget(target: string | null | undefined, fallback?: string): string {
+export function sanitizeRedirectTarget(
+  target: string | null | undefined,
+  fallback?: string,
+  frontendAppUrl?: string,
+): string {
   const base = fallback || DEFAULT_FRONTEND_URL;
   if (!target) {
     return base;
   }
+
+  // Build a whitelist of allowed origins from FRONTEND_APP_URL and the default
+  const allowedOrigins = new Set<string>();
+  allowedOrigins.add(new URL(DEFAULT_FRONTEND_URL).origin);
+  if (frontendAppUrl) {
+    for (const u of frontendAppUrl.split(',')) {
+      try { allowedOrigins.add(new URL(u.trim()).origin); } catch { /* skip malformed */ }
+    }
+  }
+
   try {
     const parsed = new URL(target);
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+    if (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      allowedOrigins.has(parsed.origin)
+    ) {
       return parsed.toString();
     }
   } catch (_err) {

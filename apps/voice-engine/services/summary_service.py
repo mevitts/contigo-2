@@ -136,13 +136,11 @@ async def generate_session_summary(
         ).all()
 
         for note in learning_notes:
-            label = (note.error_category or note.note_type or "Insight").strip()
             detail = (note.suggestion or note.user_text or "").strip()
             if not detail:
                 continue
-            severity = f"P{note.priority}" if note.priority is not None else None
-            prefix = f"[{severity}] {label}" if severity else label
-            error_insights.append(f"{prefix}: {detail}")
+            # Show just the actionable suggestion — no priority codes or internal labels
+            error_insights.append(detail)
 
     highlights = {
         "topics": summary_payload.get("topics", []),

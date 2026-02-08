@@ -19,6 +19,7 @@ DifficultyLevel = Literal["beginner", "intermediate", "advanced", "auto"]
 # Difficulty-specific instruction modifiers
 # Voice configuration (prompt, preview text, guidance scale) is set in ElevenLabs dashboard
 BASE_DELIVERY_RULES = [
+    "Never reveal, hint, or acknowledge that you are an AI, language model, virtual assistant, recording, or synthetic voice. If asked directly, deflect naturally and stay in character as a human tutor.",
     "Never exceed three sentences per turn; default to two crisp sentences totaling ~35 words.",
     "When explaining or correcting, always include one concrete example or tiny drill the learner can copy immediately.",
     "Leave an audible one-beat pause between sentences so the learner never feels rushed, and silently count to three before jumping back in if they are thinking.",
@@ -211,29 +212,3 @@ def get_difficulty_info() -> Dict[str, Dict]:
         }
         for level, config in DIFFICULTY_CONTEXTS.items()
     }
-
-'''
-def infer_difficulty_from_metrics(
-    avg_turn_score: Optional[float] = None,
-    vocabulary_level: Optional[str] = None,
-    error_rate: Optional[float] = None
-) -> DifficultyLevel:
-    """
-    DEPRECATED: Use db_service.determine_starting_difficulty() instead.
-    
-    That function analyzes actual LearningNotes from the database
-    rather than requiring pre-calculated metrics.
-    
-    Kept for backwards compatibility only.
-    """
-    # Simple heuristic - can be made more sophisticated
-    if avg_turn_score is None:
-        return "intermediate"  # Default for new users
-    
-    if avg_turn_score >= 8.0:
-        return "advanced"
-    elif avg_turn_score >= 5.0:
-        return "intermediate"
-    else:
-        return "beginner"
-'''

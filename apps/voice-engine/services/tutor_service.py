@@ -38,7 +38,13 @@ try:
     redis_client.ping()
     logger.info("Tutor service connected to Redis for transcript caching.")
 except redis.exceptions.ConnectionError as e:
-    logger.error(f"Tutor service could not connect to Redis: {e}", exc_info=True)
+    if settings.is_production:
+        logger.critical(
+            "FATAL: Redis unavailable in production — adaptive features and transcript caching disabled",
+            exc_info=True,
+        )
+    else:
+        logger.error(f"Tutor service could not connect to Redis: {e}", exc_info=True)
     redis_client = None
 
 def _get_transcript_key(conversation_id: uuid.UUID) -> str:
@@ -248,6 +254,7 @@ async def register_user_turn(
     transcript_key = _get_transcript_key(conversation_id)
     redis_client.rpush(transcript_key, f"Learner: {text}")
     redis_client.expire(transcript_key, settings.REDIS_TTL_SECONDS)
+    logger.info(f"Redis: Stored user turn for {conversation_id}, transcript length: {len(text)}")
     logger.debug("Buffered user turn to Redis", extra={"conversation_id": str(conversation_id)})
 
 
@@ -269,7 +276,8 @@ async def register_agent_turn(
     # Store agent turn and increment counter
     redis_client.rpush(transcript_key, f"Tutor: {text}")
     turn_count = redis_client.incr(turn_counter_key)
-    
+    logger.info(f"Redis: Stored agent turn for {conversation_id}, turn_count: {turn_count}")
+
     # Set expiration on first increment
     if turn_count == 1:
         redis_client.expire(transcript_key, settings.REDIS_TTL_SECONDS)

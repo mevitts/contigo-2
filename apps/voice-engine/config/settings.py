@@ -69,6 +69,13 @@ class Settings(BaseSettings):
     TRANSLATION_API_KEY: str = os.getenv("TRANSLATION_API_KEY", "")
     TRANSLATION_API_TIMEOUT: float = float(os.getenv("TRANSLATION_API_TIMEOUT", "6.0"))
     
+    # Auth (shared secret with core-api for JWT validation)
+    VOICE_ENGINE_SECRET: str = os.getenv("VOICE_ENGINE_SECRET", "")
+
+    # Session limits
+    MAX_SESSION_MINUTES: int = int(os.getenv("MAX_SESSION_MINUTES", "30"))
+    MAX_AUDIO_CHUNK_BYTES: int = int(os.getenv("MAX_AUDIO_CHUNK_BYTES", str(1024 * 1024)))  # 1 MB default
+
     PYTHON_VOICE_SERVICE_URL: str = os.getenv("PYTHON_VOICE_SERVICE_URL", "")
    
     @property

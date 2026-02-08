@@ -76,13 +76,9 @@ function buildUrl(path: string, query?: JsonRequestInit['query']): URL {
   const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
   const overrideBase = readEnvValue('CONTIGO_API_BASE_URL');
   const baseUrl = ensureTrailingSlash(overrideBase || appConfig.apiBaseUrl);
-  if (baseLogCount < 10) {
+  if (import.meta.env.DEV && baseLogCount < 5) {
     baseLogCount += 1;
-    console.log('[api] base selection', {
-      overrideBase,
-      appConfigBase: appConfig.apiBaseUrl,
-      resolvedBase: baseUrl,
-    });
+    console.log('[api] base →', baseUrl);
   }
   const url = new URL(normalizedPath, baseUrl);
 
@@ -140,7 +136,9 @@ async function apiRequest<T>(path: string, init: JsonRequestInit = {}): Promise<
     body,
   };
 
-  console.log('[api] request', { url: url.toString(), method: fetchInit.method ?? 'GET' });
+  if (import.meta.env.DEV) {
+    console.log('[api] request', { url: url.toString(), method: fetchInit.method ?? 'GET' });
+  }
 
   const response = await fetch(url, fetchInit);
   if (!response.ok) {

@@ -1,6 +1,26 @@
-import { Mic, Globe, Book, BookOpen } from "lucide-react";
+import { useState, useRef } from "react";
+import { Mic, Globe, Book, BookOpen, Info } from "lucide-react";
 import type { SessionRecord, WeeklyArticle } from "../lib/types";
 import { SpotlightCard } from "./SpotlightCard";
+
+const GREETINGS = [
+  { text: "Buenos días", origin: "Universal Spanish", flags: "\u{1F30E}", note: "The standard morning greeting used across all Spanish-speaking countries." },
+  { text: "¿Qué onda?", origin: "Mexico", flags: "\u{1F1F2}\u{1F1FD}", note: "Casual slang meaning 'What's up?' — from 'onda' (wave/vibe). Ubiquitous among young Mexicans." },
+  { text: "¿Qué tal?", origin: "Spain & Latin America", flags: "\u{1F1EA}\u{1F1F8} \u{1F30E}", note: "A universal informal greeting, short for '¿Qué tal estás?' — works anywhere Spanish is spoken." },
+  { text: "¡Buenas!", origin: "Universal Informal", flags: "\u{1F30E}", note: "A friendly shortening of 'buenos días/tardes/noches' — works any time of day." },
+  { text: "¿Cómo andás?", origin: "Argentina & Uruguay", flags: "\u{1F1E6}\u{1F1F7} \u{1F1FA}\u{1F1FE}", note: "Rioplatense Spanish using 'vos' conjugation instead of 'tú'. Literally 'How are you walking?'" },
+  { text: "¡Epa!", origin: "Venezuela", flags: "\u{1F1FB}\u{1F1EA}", note: "A quick, upbeat greeting or exclamation of surprise — pure Venezuelan energy." },
+  { text: "¿Qué hubo?", origin: "Colombia", flags: "\u{1F1E8}\u{1F1F4}", note: "Pronounced 'quiubo' — a warm, casual 'What's been going on?' heard on the streets of Bogotá and Medellín." },
+  { text: "¿Qué hay de nuevo?", origin: "Caribbean Spanish", flags: "\u{1F1E8}\u{1F1FA} \u{1F1E9}\u{1F1F4} \u{1F1F5}\u{1F1F7}", note: "Literally 'What's new?' — a breezy conversation opener popular in Cuba, Dominican Republic, and Puerto Rico." },
+  { text: "¡Hola, che!", origin: "Argentina", flags: "\u{1F1E6}\u{1F1F7}", note: "'Che' is the iconic Argentine interjection — a term of familiarity, like 'hey, buddy.'" },
+  { text: "¿Cómo vas?", origin: "Central America", flags: "\u{1F1EC}\u{1F1F9} \u{1F1F8}\u{1F1FB} \u{1F1ED}\u{1F1F3}", note: "A casual 'How's it going?' widely used in Guatemala, El Salvador, and Honduras." },
+  { text: "¿Qué más?", origin: "Colombia & Ecuador", flags: "\u{1F1E8}\u{1F1F4} \u{1F1EA}\u{1F1E8}", note: "Short for '¿Qué más hay?' — a laid-back 'What else is going on?' among friends." },
+  { text: "¡Quiúbole!", origin: "Mexico", flags: "\u{1F1F2}\u{1F1FD}", note: "A playful contraction of '¿Qué hubo le?' — very informal, mostly between close friends." },
+  { text: "¿Cómo te va?", origin: "Universal", flags: "\u{1F30E}", note: "Literally 'How's it going for you?' — polite and warm, works in any context." },
+  { text: "¡Hola, pana!", origin: "Venezuela & Ecuador", flags: "\u{1F1FB}\u{1F1EA} \u{1F1EA}\u{1F1E8}", note: "'Pana' means buddy/pal — from 'panadero' (baker), old slang for a trusted companion." },
+  { text: "¿Todo bien?", origin: "Spain & Southern Cone", flags: "\u{1F1EA}\u{1F1F8} \u{1F1E6}\u{1F1F7} \u{1F1E8}\u{1F1F1}", note: "A casual check-in — 'Everything good?' Used like the English 'All right?'" },
+  { text: "¡Pura vida!", origin: "Costa Rica", flags: "\u{1F1E8}\u{1F1F7}", note: "Literally 'pure life' — Costa Rica's national motto, used as hello, goodbye, thanks, and everything in between." },
+] as const;
 
 interface DashboardProps {
   userName: string;
@@ -24,6 +44,19 @@ const NoiseOverlay = () => (
 );
 
 export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNotebook, onGoToLibrary, isLoading = false, spotlightArticle, onReadArticle }: DashboardProps) {
+  const [greetingIndex] = useState(() => Math.floor(Math.random() * GREETINGS.length));
+  const [showTooltip, setShowTooltip] = useState(false);
+  const tooltipTimeout = useRef<ReturnType<typeof setTimeout>>();
+
+  const greeting = GREETINGS[greetingIndex];
+
+  const handleTooltipEnter = () => {
+    clearTimeout(tooltipTimeout.current);
+    setShowTooltip(true);
+  };
+  const handleTooltipLeave = () => {
+    tooltipTimeout.current = setTimeout(() => setShowTooltip(false), 150);
+  };
   return (
     <div className="min-h-screen bg-plaster font-serif animate-fade-in flex flex-col relative overflow-hidden">
       <NoiseOverlay />
@@ -58,7 +91,39 @@ export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNote
         
         <div className="space-y-12 md:space-y-16 lg:space-y-20 relative flex flex-col max-w-4xl">
            <div className="flex flex-col gap-1">
-             <span className="text-2xl md:text-3xl lg:text-4xl font-sans font-bold text-white/90 leading-tight">Buenos Días,</span>
+             <div className="flex items-center gap-2">
+               <span
+                 key={greetingIndex}
+                 className="text-2xl md:text-3xl lg:text-4xl font-sans font-bold text-white/90 leading-tight animate-fade-in"
+               >
+                 {greeting.text},
+               </span>
+               <div
+                 className="relative"
+                 onMouseEnter={handleTooltipEnter}
+                 onMouseLeave={handleTooltipLeave}
+                 onTouchStart={() => setShowTooltip((v) => !v)}
+               >
+                 <Info size={14} className="text-white/40 hover:text-white/80 transition-colors cursor-help mt-1" />
+                 {showTooltip && (
+                   <div className="absolute left-full bottom-0 ml-3 w-80 bg-white rounded-2xl shadow-2xl border border-black/10 p-5 z-50 text-left">
+                     <div className="flex items-center gap-2.5 mb-2">
+                       <span className="text-xl leading-none">{greeting.flags}</span>
+                       <p className="text-xs font-sans font-bold uppercase tracking-[0.2em] text-pink">{greeting.origin}</p>
+                     </div>
+                     <p className="text-sm font-sans text-textMain leading-relaxed">{greeting.note}</p>
+                     <a
+                       href="https://blog.worldsacross.com/index/regional-vocabulary-words-from-different-spanish-speaking-countries"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="inline-block mt-3 text-[11px] font-sans font-semibold text-sky/70 hover:text-pink transition-colors"
+                     >
+                       Explore regional expressions &rarr;
+                     </a>
+                   </div>
+                 )}
+               </div>
+             </div>
              <h1 className="text-5xl md:text-6xl lg:text-8xl font-serif text-white leading-none mb-2">{userName}</h1>
            </div>
 

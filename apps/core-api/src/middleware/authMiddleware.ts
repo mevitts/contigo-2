@@ -16,9 +16,9 @@ const authMiddleware = createMiddleware<MiddlewareEnv>(async (c, next) => {
     return;
   }
 
-  // In demo mode (FORCE_DEMO_AUTH=true), bypass auth and use a fixed demo user
   const config = c.var.config;
-  console.log('[authMiddleware] FORCE_DEMO_AUTH:', config?.FORCE_DEMO_AUTH, 'config exists:', !!config);
+
+  // In demo mode (FORCE_DEMO_AUTH=true), bypass auth and use a fixed demo user
   if (config?.FORCE_DEMO_AUTH) {
     c.set('userId', DEMO_USER.ID);
     await next();

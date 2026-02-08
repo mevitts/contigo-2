@@ -7,7 +7,9 @@ import runtimeEnv from './lib/env';
 
 const hasWindow = typeof window !== 'undefined';
 
-console.log('[bootstrap] captured env', { hasEnv: true, keys: Object.keys(runtimeEnv) });
+if (import.meta.env.DEV) {
+  console.log('[bootstrap] captured env', { keys: Object.keys(runtimeEnv).length });
+}
 
 if (hasWindow) {
   (window as any).__VITE_ENV__ = runtimeEnv;

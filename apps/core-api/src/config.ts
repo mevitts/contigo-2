@@ -49,8 +49,6 @@ export function loadConfig(env: DbEnv): Config {
   }
 
   config = parsedEnv.data;
-  console.log('✅ Configuration loaded successfully.');
-  console.log('   FORCE_DEMO_AUTH:', config.FORCE_DEMO_AUTH);
-  console.log('   ENVIRONMENT:', config.ENVIRONMENT);
+  console.log('Configuration loaded. ENVIRONMENT:', config.ENVIRONMENT);
   return config;
 }

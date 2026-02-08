@@ -176,6 +176,7 @@ class ElevenLabsConversationHandler:
                     "text_preview": context_text[:200],
                 },
             )
+            logger.debug("Full contextual update text:\n%s", context_text)
         except Exception as exc:
             logger.warning(
                 "Unable to send contextual update",
@@ -510,12 +511,13 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
             self.is_active = True
             logger.info("Connected to ElevenLabs WebSocket")
             await self._emit_dynamic_variables_event("init")
-            
-            await asyncio.sleep(0.5)
+
+            # Give ElevenLabs time to ingest context before triggering greeting
+            await asyncio.sleep(1.0)
             initial_silence = {"user_audio_chunk": INITIAL_SILENCE_CHUNK}
             if self.elevenlabs_ws:
                 await self.elevenlabs_ws.send(json.dumps(initial_silence))
-            logger.info("Sent initial silence to trigger agent greeting")
+            logger.info("Sent initial silence to trigger agent greeting (context sent 1s prior)")
             
             logger.info("Starting bidirectional audio bridge")
             
@@ -551,7 +553,12 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                 
                 if message["type"] == "audio":
                     audio_data = message["data"]
-                    logger.debug(f"Received audio chunk from frontend, size: {len(audio_data) if audio_data else 0}")
+                    # Reject oversized audio chunks to prevent DoS
+                    chunk_size = len(audio_data) if audio_data else 0
+                    if chunk_size > settings.MAX_AUDIO_CHUNK_BYTES:
+                        logger.warning(f"Audio chunk too large ({chunk_size} bytes), dropping")
+                        continue
+                    logger.debug(f"Received audio chunk from frontend, size: {chunk_size}")
                     self.last_user_audio_ts = time.monotonic()
                     self._cancel_keepalive()
 
@@ -623,7 +630,12 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                     
                 elif message_type == "user_transcript":
                     transcript_event = data.get("user_transcript_event", {})
-                    transcript_text = transcript_event.get("user_transcript", "")
+                    transcript_text = (
+                        transcript_event.get("user_transcript", "")
+                        or data.get("user_transcription_event", {}).get("user_transcript", "")
+                    )
+                    if not transcript_text:
+                        logger.warning(f"Empty user transcript event. Raw keys: {list(data.keys())}, event: {json.dumps(data)[:500]}")
                     logger.info(f"User transcript: {transcript_text}")
 
                     # --- CACHE USER TEXT FOR REFERENCE DETECTION ---
@@ -706,11 +718,13 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                         "type": "agent_response",
                         "text": agent_text
                     })
-
-                    # --- REFERENCE DETECTION ---
+# --- REFERENCE DETECTION ---
                     if agent_text and settings.ENABLE_REFERENCE_DETECTION:
                         asyncio.create_task(self._check_for_references(agent_text))
                     # ---------------------------
+
+                elif message_type == "ping":
+                    pass  # ElevenLabs keepalive - ignore silently
 
                 elif "error" in data:
                     logger.error(f"ElevenLabs error: {data['error']}")
@@ -722,13 +736,9 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                     try:
                         payload_preview = json.dumps(data)[:500]
                     except Exception:
-                        payload_preview = str(data)
+                        payload_preview = str(data)[:500]
                     logger.warning(
-                        "Unhandled ElevenLabs event",
-                        extra={
-                            "event_type": message_type or "unknown",
-                            "payload_preview": payload_preview,
-                        },
+                        f"Unhandled ElevenLabs event: type={message_type or 'unknown'}, payload={payload_preview}",
                     )
 
         except websockets.exceptions.ConnectionClosed:
@@ -814,6 +824,10 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
             },
         )
         await self._send_agent_directive(enriched)
+        # Send a user-visible nudge for medium/high severity guidance
+        severity = enriched.get("severity", "low")
+        if severity in ("high", "medium") and truncated:
+            await self._send_user_nudge(enriched)
 
     async def _send_agent_directive(self, payload: dict):
         if not self.elevenlabs_ws:
@@ -848,6 +862,28 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                     "focus": payload.get("focus"),
                 },
             )
+
+    async def _send_user_nudge(self, payload: dict):
+        """Send a subtle coaching tip to the frontend for user display."""
+        if not self.frontend_ws:
+            return
+        suggestion = (payload.get("instruction") or payload.get("suggestion") or "").strip()
+        if not suggestion:
+            return
+        # Build a short, user-friendly tip (max ~80 chars)
+        tip = suggestion if len(suggestion) <= 80 else suggestion[:77] + "..."
+        try:
+            await self.frontend_ws.send_json({
+                "type": "guidance_nudge",
+                "tip": tip,
+                "focus": payload.get("focus", ""),
+            })
+            logger.info(
+                "User nudge sent to frontend",
+                extra={"tip_preview": tip[:60], "focus": payload.get("focus")},
+            )
+        except Exception as exc:
+            logger.warning("Unable to send user nudge", extra={"error": str(exc)})
 
     def build_local_summary_artifacts(self) -> Optional[SessionArtifacts]:
         if not self.local_transcript and not self.guidance_history:

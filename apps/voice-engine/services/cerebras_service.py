@@ -107,7 +107,10 @@ class CerebrasService:
                 )
                 raise
             result = response.json()
-            return result["choices"][0]["message"]["content"]
+            content = result["choices"][0]["message"]["content"]
+            # Strip <think>...</think> reasoning blocks that some models emit
+            content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+            return content
 
     async def analyze_conversation(
         self,
@@ -225,9 +228,10 @@ Identify repeated or emerging issues across the most recent turns and respond ON
   "note_type": "CLUSTER" | "GRAMMAR" | "VOCAB" | "FLUENCY",
   "priority": 1-3,
   "error_category": "short label",
-  "suggestion": "brief coaching tip",
+  "suggestion": "learner-facing practice tip — written directly TO the student, e.g. 'Try expanding beyond single-word answers into full sentences' NOT 'Encourage the learner to expand...' Combine related issues into one concise tip.",
   "guidance": "instruction for the tutor on how to adapt mid-session"
 }
+The 'suggestion' field is shown directly to the learner in their session summary, so write it as friendly advice TO them (second person). The 'guidance' field is for the tutor AI only.
 Focus guidance on how the tutor should adjust speed, difficulty, or topic emphasis right now."""
 
         try:

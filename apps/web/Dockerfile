@@ -13,6 +13,11 @@ RUN npm install
 # Copy all application files
 COPY . .
 
+# Run as non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN chown -R appuser:appgroup /app
+USER appuser
+
 # Expose Vite's default port
 EXPOSE 5173
 

@@ -40,7 +40,7 @@ type AppView =
 
 type DifficultyLevel = "beginner" | "intermediate" | "advanced";
 
-const PREMIUM_LIMIT_FALLBACK_MINUTES = 5;
+const PREMIUM_LIMIT_FALLBACK_MINUTES = 3;
 
 const premiumPlanOptions: PremiumPlanOption[] = [
   {
@@ -80,9 +80,6 @@ const DEFAULT_PREFERENCES: { difficulty: DifficultyLevel; adaptive: boolean } = 
 
 const USER_STORAGE_KEY = "contigo:user";
 const TOKEN_STORAGE_KEY = "contigo:token";
-
-//console.log('dev mode?', import.meta.env.VITE_CONTIGO_DEVELOPER_MODE, appConfig);
-//console.log('config', appConfig.developerMode, appConfig.devUserProfile);
 
 function loadStoredUser(): UserProfile | null {
   if (typeof window === "undefined") {
@@ -694,7 +691,6 @@ export default function App() {
               user={user}
               onLogout={handleLogout}
               difficulty={difficultyPreference}
-              adaptiveMode={adaptivePreference}
               extraSupportMode={extraSupportMode}
               onDifficultyChange={handleDifficultyChange}
               onExtraSupportChange={handleExtraSupportChange}
