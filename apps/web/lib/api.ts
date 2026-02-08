@@ -1,12 +1,17 @@
 import { appConfig } from './config';
 import type {
   ApiErrorShape,
+  ArticleAnalysis,
+  CreateReferenceRequest,
   CreateSessionRequest,
+  Reference,
   SessionRecord,
   SessionSummaryDetails,
   SpanishSnippet,
+  UpdateReferenceRequest,
   UserProfile,
   VoiceWebsocketInfo,
+  WeeklyArticle,
 } from './types';
 
 export class ContigoApiError extends Error {
@@ -385,5 +390,294 @@ export async function getSessionSummary(conversationId: string): Promise<Session
       return null;
     }
     throw error;
+  }
+}
+
+function normalizeReference(input: any): Reference {
+  return {
+    id: input.id ?? '',
+    userId: input.user_id ?? input.userId ?? '',
+    conversationId: input.conversation_id ?? input.conversationId ?? null,
+    title: input.title ?? '',
+    referenceType: input.reference_type ?? input.referenceType ?? 'OTHER',
+    url: input.url ?? null,
+    contentText: input.content_text ?? input.contentText ?? null,
+    source: input.source ?? null,
+    isPinned: Boolean(input.is_pinned ?? input.isPinned ?? false),
+    tags: input.tags ?? null,
+    notes: input.notes ?? null,
+    detectedContext: input.detected_context ?? input.detectedContext ?? null,
+    detectionMethod: input.detection_method ?? input.detectionMethod ?? null,
+    createdAt: input.created_at ?? input.createdAt ?? new Date().toISOString(),
+  };
+}
+
+export async function listReferences(
+  userId: string,
+  conversationId?: string,
+  signal?: AbortSignal
+): Promise<Reference[]> {
+  if (!userId) {
+    return [];
+  }
+
+  const data = await apiRequest<any>('/v1/references', {
+    method: 'GET',
+    signal,
+    query: { userId, conversationId },
+  });
+
+  const references: any[] = Array.isArray(data?.references) ? data.references : [];
+  return references.map(normalizeReference);
+}
+
+export async function listPinnedReferences(
+  userId: string,
+  limit = 5,
+  signal?: AbortSignal
+): Promise<Reference[]> {
+  if (!userId) {
+    return [];
+  }
+
+  const data = await apiRequest<any>('/v1/references/pinned', {
+    method: 'GET',
+    signal,
+    query: { userId, limit },
+  });
+
+  const references: any[] = Array.isArray(data?.references) ? data.references : [];
+  return references.map(normalizeReference);
+}
+
+export async function getReference(referenceId: string): Promise<Reference | null> {
+  if (!referenceId) {
+    return null;
+  }
+
+  try {
+    const data = await apiRequest<any>(`/v1/references/${referenceId}`, {
+      method: 'GET',
+    });
+
+    return data?.reference ? normalizeReference(data.reference) : null;
+  } catch (error) {
+    if (error instanceof ContigoApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function createReference(params: CreateReferenceRequest): Promise<Reference> {
+  const payload = {
+    user_id: params.userId,
+    conversation_id: params.conversationId ?? null,
+    title: params.title,
+    reference_type: params.referenceType,
+    url: params.url ?? null,
+    content_text: params.contentText ?? null,
+    source: params.source ?? null,
+    is_pinned: params.isPinned ?? false,
+    tags: params.tags ?? null,
+    notes: params.notes ?? null,
+    detected_context: params.detectedContext ?? null,
+    detection_method: params.detectionMethod ?? null,
+  };
+
+  const data = await apiRequest<any>('/v1/references', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  return {
+    id: data.id,
+    userId: params.userId,
+    conversationId: params.conversationId ?? null,
+    title: params.title,
+    referenceType: params.referenceType,
+    url: params.url ?? null,
+    contentText: params.contentText ?? null,
+    source: params.source ?? null,
+    isPinned: params.isPinned ?? false,
+    tags: params.tags ?? null,
+    notes: params.notes ?? null,
+    detectedContext: params.detectedContext ?? null,
+    detectionMethod: params.detectionMethod ?? null,
+    createdAt: data.created_at ?? new Date().toISOString(),
+  };
+}
+
+export async function updateReference(
+  referenceId: string,
+  params: UpdateReferenceRequest
+): Promise<void> {
+  const payload: Record<string, unknown> = {};
+
+  if (params.title !== undefined) payload.title = params.title;
+  if (params.referenceType !== undefined) payload.reference_type = params.referenceType;
+  if (params.url !== undefined) payload.url = params.url;
+  if (params.contentText !== undefined) payload.content_text = params.contentText;
+  if (params.source !== undefined) payload.source = params.source;
+  if (params.isPinned !== undefined) payload.is_pinned = params.isPinned;
+  if (params.tags !== undefined) payload.tags = params.tags;
+  if (params.notes !== undefined) payload.notes = params.notes;
+
+  await apiRequest(`/v1/references/${referenceId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteReference(referenceId: string): Promise<void> {
+  if (!referenceId) {
+    return;
+  }
+
+  await apiRequest(`/v1/references/${referenceId}`, {
+    method: 'DELETE',
+  });
+}
+
+// Weekly Reading Spotlight API
+
+function normalizeArticle(input: any): WeeklyArticle {
+  return {
+    id: input.id ?? '',
+    url: input.url ?? '',
+    title: input.title ?? '',
+    author: input.author ?? null,
+    sourceName: input.source_name ?? input.sourceName ?? null,
+    contentText: input.content_text ?? input.contentText ?? null,
+    summary: input.summary ?? null,
+    keyPoints: Array.isArray(input.key_points ?? input.keyPoints) ? (input.key_points ?? input.keyPoints) : [],
+    imageUrl: input.image_url ?? input.imageUrl ?? null,
+    difficultyLevel: input.difficulty_level ?? input.difficultyLevel ?? null,
+    tags: Array.isArray(input.tags) ? input.tags : [],
+    isActive: Boolean(input.is_active ?? input.isActive ?? false),
+    weekStart: input.week_start ?? input.weekStart ?? null,
+    weekEnd: input.week_end ?? input.weekEnd ?? null,
+    createdAt: input.created_at ?? input.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function normalizeAnalysis(input: any): ArticleAnalysis {
+  const mapVocab = (items: any[]) =>
+    items.map((v: any) => ({
+      word: v.word ?? '',
+      translation: v.translation ?? '',
+      context: v.context ?? undefined,
+      levelNote: v.level_note ?? v.levelNote ?? undefined,
+    }));
+
+  const mapGrammar = (items: any[]) =>
+    items.map((g: any) => ({
+      pattern: g.pattern ?? '',
+      example: g.example ?? '',
+      explanation: g.explanation ?? '',
+    }));
+
+  const mapCulture = (items: any[]) =>
+    items.map((c: any) => ({
+      topic: c.topic ?? '',
+      explanation: c.explanation ?? '',
+      connection: c.connection ?? undefined,
+    }));
+
+  return {
+    id: input.id ?? '',
+    articleId: input.article_id ?? input.articleId ?? '',
+    userId: input.user_id ?? input.userId ?? '',
+    vocabItems: Array.isArray(input.vocab_items ?? input.vocabItems)
+      ? mapVocab(input.vocab_items ?? input.vocabItems)
+      : [],
+    grammarPatterns: Array.isArray(input.grammar_patterns ?? input.grammarPatterns)
+      ? mapGrammar(input.grammar_patterns ?? input.grammarPatterns)
+      : [],
+    culturalNotes: Array.isArray(input.cultural_notes ?? input.culturalNotes)
+      ? mapCulture(input.cultural_notes ?? input.culturalNotes)
+      : [],
+    personalizedTips: Array.isArray(input.personalized_tips ?? input.personalizedTips)
+      ? (input.personalized_tips ?? input.personalizedTips)
+      : [],
+    createdAt: input.created_at ?? input.createdAt ?? new Date().toISOString(),
+  };
+}
+
+export async function getCurrentSpotlight(signal?: AbortSignal): Promise<WeeklyArticle | null> {
+  try {
+    const base = appConfig.translationServiceUrl;
+    const response = await fetch(`${base}/articles/spotlight`, {
+      method: 'GET',
+      headers: JSON_HEADERS,
+      signal,
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data?.article) {
+      return null;
+    }
+
+    return normalizeArticle(data.article);
+  } catch (err) {
+    console.error('[api] spotlight fetch failed', err);
+    return null;
+  }
+}
+
+export async function getArticleDetails(articleId: string): Promise<WeeklyArticle | null> {
+  if (!articleId) {
+    return null;
+  }
+
+  try {
+    const base = appConfig.translationServiceUrl;
+    const response = await fetch(`${base}/articles/${articleId}`, {
+      method: 'GET',
+      headers: JSON_HEADERS,
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data?.article ? normalizeArticle(data.article) : null;
+  } catch (err) {
+    console.error('[api] article details fetch failed', err);
+    return null;
+  }
+}
+
+export async function getArticleAnalysis(
+  articleId: string,
+  userId: string,
+  difficulty = 'intermediate'
+): Promise<ArticleAnalysis | null> {
+  if (!articleId || !userId) {
+    return null;
+  }
+
+  try {
+    const base = appConfig.translationServiceUrl;
+    const response = await fetch(`${base}/articles/${articleId}/analyze`, {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ user_id: userId, difficulty }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data?.analysis ? normalizeAnalysis(data.analysis) : null;
+  } catch (err) {
+    console.error('[api] article analysis failed', err);
+    return null;
   }
 }

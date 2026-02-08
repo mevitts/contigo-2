@@ -97,3 +97,106 @@ export interface SessionSummaryDetails {
   episodicSummary?: string | null;
   localizedSummary?: LocalizedSummary | null;
 }
+
+export type ReferenceType = 'SONG' | 'LYRICS' | 'ARTICLE' | 'VIDEO' | 'BOOK_EXCERPT' | 'CULTURAL' | 'OTHER';
+
+export interface Reference {
+  id: string;
+  userId: string;
+  conversationId?: string | null;
+  title: string;
+  referenceType: ReferenceType;
+  url?: string | null;
+  contentText?: string | null;
+  source?: string | null;
+  isPinned: boolean;
+  tags?: string[] | null;
+  notes?: string | null;
+  detectedContext?: string | null;
+  detectionMethod?: 'auto' | 'manual' | null;
+  createdAt: string;
+}
+
+export interface DetectedReference {
+  title: string;
+  type: ReferenceType;
+  source?: string;
+  context: string;
+  confidence: number;
+}
+
+export interface CreateReferenceRequest {
+  userId: string;
+  conversationId?: string | null;
+  title: string;
+  referenceType: ReferenceType;
+  url?: string | null;
+  contentText?: string | null;
+  source?: string | null;
+  isPinned?: boolean;
+  tags?: string[] | null;
+  notes?: string | null;
+  detectedContext?: string | null;
+  detectionMethod?: 'auto' | 'manual';
+}
+
+export interface UpdateReferenceRequest {
+  title?: string;
+  referenceType?: ReferenceType;
+  url?: string | null;
+  contentText?: string | null;
+  source?: string | null;
+  isPinned?: boolean;
+  tags?: string[] | null;
+  notes?: string | null;
+}
+
+// Weekly Reading Spotlight types
+
+export interface WeeklyArticle {
+  id: string;
+  url: string;
+  title: string;
+  author?: string | null;
+  sourceName?: string | null;
+  contentText?: string | null;
+  summary?: string | null;
+  keyPoints: string[];
+  imageUrl?: string | null;
+  difficultyLevel?: string | null;
+  tags: string[];
+  isActive: boolean;
+  weekStart?: string | null;
+  weekEnd?: string | null;
+  createdAt: string;
+}
+
+export interface ArticleVocabItem {
+  word: string;
+  translation: string;
+  context?: string;
+  levelNote?: string;
+}
+
+export interface ArticleGrammarPattern {
+  pattern: string;
+  example: string;
+  explanation: string;
+}
+
+export interface ArticleCulturalNote {
+  topic: string;
+  explanation: string;
+  connection?: string;
+}
+
+export interface ArticleAnalysis {
+  id: string;
+  articleId: string;
+  userId: string;
+  vocabItems: ArticleVocabItem[];
+  grammarPatterns: ArticleGrammarPattern[];
+  culturalNotes: ArticleCulturalNote[];
+  personalizedTips: string[];
+  createdAt: string;
+}

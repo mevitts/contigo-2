@@ -523,5 +523,90 @@ Criteria:
                 "reasoning": f"Assessment error: {str(e)}"
             }
 
+    async def detect_references(
+        self,
+        agent_text: str,
+        user_text: str = "",
+        model: str = "llama-3.3-70b",
+        timeout: float = 5.0
+    ) -> Dict[str, Any]:
+        """
+        Detect cultural references, songs, and other saveable content in conversation.
+
+        Fallback detection using Cerebras when Gemini is unavailable.
+
+        Args:
+            agent_text: What the tutor agent said
+            user_text: What the learner said (optional context)
+            model: Cerebras model to use
+            timeout: Request timeout in seconds
+
+        Returns:
+            Dictionary containing:
+            - detected: bool - whether any references were found
+            - references: list of {title, type, source, context, confidence}
+        """
+        if not self.api_key:
+            logger.warning("Cerebras API key not configured - skipping reference detection")
+            return {"detected": False, "references": []}
+
+        system_prompt = """You detect cultural references, songs, books, and other content worth saving from Spanish tutoring conversations.
+
+Look for:
+- Songs mentioned or lyrics discussed
+- Book/article excerpts or quotes
+- Cultural references (holidays, traditions, idioms explained)
+- Videos or media recommendations
+- Artists, authors, or cultural figures discussed
+
+Respond ONLY with valid JSON:
+{
+  "detected": true | false,
+  "references": [
+    {
+      "title": "name of song/book/reference",
+      "type": "SONG" | "LYRICS" | "ARTICLE" | "VIDEO" | "BOOK_EXCERPT" | "CULTURAL" | "OTHER",
+      "source": "artist/author/origin if known",
+      "context": "brief description of how it came up",
+      "confidence": 0.0-1.0
+    }
+  ]
+}
+
+Only include references with confidence >= 0.7.
+If no clear references are found, return {"detected": false, "references": []}."""
+
+        user_prompt = f"Tutor said: \"{agent_text}\""
+        if user_text:
+            user_prompt += f"\nLearner said: \"{user_text}\""
+
+        try:
+            content = await self._chat_request(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                model=model,
+                timeout=timeout,
+                temperature=0.1,
+                max_tokens=400,
+                response_format={"type": "json_object"},
+            )
+            result = json.loads(content)
+
+            # Filter by confidence threshold
+            threshold = settings.REFERENCE_DETECTION_CONFIDENCE_THRESHOLD
+            if result.get("references"):
+                result["references"] = [
+                    ref for ref in result["references"]
+                    if ref.get("confidence", 0) >= threshold
+                ]
+                result["detected"] = len(result["references"]) > 0
+
+            logger.info(f"Cerebras reference detection: {len(result.get('references', []))} references found")
+            return result
+
+        except Exception as exc:
+            logger.error(f"Cerebras reference detection failed: {exc}")
+            return {"detected": False, "references": []}
+
 
 cerebras_service = CerebrasService()

@@ -58,7 +58,9 @@ app.add_middleware(
 # Include full voice routes in Docker mode
 if VOICE_SERVICE_MODE == "full":
     from api.routes import voice
+    from api.routes import articles
     app.include_router(voice.router)
+    app.include_router(articles.router)
 
 @app.get("/health")
 def health_check():

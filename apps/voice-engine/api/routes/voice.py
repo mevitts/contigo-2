@@ -14,7 +14,7 @@ from services.opus_translation_service import opus_translation_service
 from services.summary_service import generate_session_summary
 from services.tutor_service import get_user_insights_for_context, should_preactivate_soft_beginner
 from sqlmodel import Session, select, desc, func
-from models.db_models import LearningNotes, Conversations, SessionSummaries
+from models.db_models import LearningNotes, Conversations, SessionSummaries, UserReferences
 from config.settings import settings
 from config.agents import DifficultyLevel, get_difficulty_info
 
@@ -167,6 +167,29 @@ def _fetch_last_conversation_context(user_id: uuid.UUID) -> Optional[dict]:
         }
 
 
+def _fetch_pinned_references(user_id: uuid.UUID, limit: int = 5) -> List[dict]:
+    """Fetch user's pinned references for agent context."""
+    with Session(engine) as db_session:
+        pinned = list(
+            db_session.exec(
+                select(UserReferences)
+                .where(UserReferences.user_id == user_id)
+                .where(UserReferences.is_pinned == True)  # noqa: E712 - SQL comparison
+                .order_by(desc(UserReferences.created_at))
+                .limit(limit)
+            ).all()
+        )
+
+        return [
+            {
+                "title": ref.title,
+                "type": str(ref.reference_type.value) if hasattr(ref.reference_type, 'value') else str(ref.reference_type),
+                "source": ref.source,
+            }
+            for ref in pinned
+        ]
+
+
 async def _collect_memory_breadcrumbs(user_id: uuid.UUID) -> List[str]:
     """Gather personal callbacks from Redis insights and stored summaries."""
     breadcrumbs: List[str] = []
@@ -221,6 +244,12 @@ async def _collect_memory_breadcrumbs(user_id: uuid.UUID) -> List[str]:
                     _store(combined)
 
     return breadcrumbs[:7]  # Increased to accommodate Redis insights
+
+
+def _fetch_active_weekly_article() -> Optional[dict]:
+    """Fetch the active weekly spotlight article for agent context."""
+    from services.article_service import get_active_spotlight
+    return get_active_spotlight()
 
 
 def _build_agent_custom_instructions(
@@ -337,6 +366,20 @@ def _build_agent_custom_instructions(
         for snippet in memory_snippets:
             lines.append(f"- {snippet}")
 
+    # Include user's pinned references for cultural context
+    pinned_refs = _fetch_pinned_references(user_id, limit=5)
+    if pinned_refs:
+        lines.append(
+            "\nThe learner has saved these cultural references to their library. "
+            "If any naturally relate to the conversation, you can reference them:"
+        )
+        for ref in pinned_refs:
+            ref_label = f"- {ref['title']}"
+            if ref.get('source'):
+                ref_label += f" by {ref['source']}"
+            ref_label += f" ({ref['type'].lower()})"
+            lines.append(ref_label)
+
     # Pre-activate soft beginner mode if user historically struggles
     if preactivate_soft:
         from config.agents import SOFT_BEGINNER_OVERLAY
@@ -351,6 +394,27 @@ def _build_agent_custom_instructions(
                 "action": "pre_activated",
                 "reason": "historical_struggle"
             }
+        )
+
+    # Inject weekly article context if available
+    weekly_article = _fetch_active_weekly_article()
+    if weekly_article:
+        lines.append(
+            "\n## Weekly Reading Spotlight"
+        )
+        lines.append(
+            f"This week's featured article is \"{weekly_article['title']}\""
+            + (f" by {weekly_article['author']}" if weekly_article.get("author") else "")
+            + "."
+        )
+        if weekly_article.get("summary"):
+            lines.append(f"Summary: {weekly_article['summary']}")
+        if weekly_article.get("key_points"):
+            points = weekly_article["key_points"][:3]
+            lines.append("Key points: " + "; ".join(points))
+        lines.append(
+            "If the learner mentions the article or wants to discuss it, engage enthusiastically. "
+            "Use vocabulary and themes from the article naturally in conversation when relevant."
         )
 
     lines.append("Keep the energy positive, collaborative, and human.")

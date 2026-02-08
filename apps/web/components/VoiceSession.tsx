@@ -1,8 +1,16 @@
 import React from "react";
-import { X, Mic, MicOff, HelpCircle, Eye, EyeOff } from "lucide-react";
+import { X, Mic, MicOff, HelpCircle, Eye, EyeOff, BookOpen } from "lucide-react";
 import { motion } from "motion/react";
-import type { SessionRecord } from "../lib/types";
-import { translateText } from "../lib/api";
+import type { SessionRecord, DetectedReference, Reference, CreateReferenceRequest } from "../lib/types";
+import {
+  translateText,
+  listReferences,
+  listPinnedReferences,
+  createReference,
+  updateReference,
+  deleteReference
+} from "../lib/api";
+import { ReferencePanel } from "./ReferencePanel";
 
 interface VoiceSessionProps {
   onEndSession: (durationSeconds: number) => void;
@@ -10,6 +18,7 @@ interface VoiceSessionProps {
   websocketUrl?: string;
   onConnectionError?: (message: string) => void;
   maxDurationSeconds?: number;
+  userId?: string;
 }
 
 interface Message {
@@ -79,7 +88,7 @@ const NoiseOverlay: React.FC = () => (
   />
 );
 
-export function VoiceSession({ onEndSession, session, websocketUrl, onConnectionError, maxDurationSeconds }: VoiceSessionProps) {
+export function VoiceSession({ onEndSession, session, websocketUrl, onConnectionError, maxDurationSeconds, userId }: VoiceSessionProps) {
   const [isMuted, setIsMuted] = React.useState(false);
   const [elapsedSeconds, setElapsedSeconds] = React.useState(0);
   const [connectionStatus, setConnectionStatus] = React.useState<"idle" | "connecting" | "connected" | "error">(
@@ -99,6 +108,12 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
   const [helpTranslation, setHelpTranslation] = React.useState<string | null>(null);
   const [helpLoading, setHelpLoading] = React.useState(false);
   const [helpError, setHelpError] = React.useState<string | null>(null);
+
+  // Reference Library state
+  const [showReferences, setShowReferences] = React.useState(false);
+  const [detectedReferences, setDetectedReferences] = React.useState<DetectedReference[]>([]);
+  const [sessionReferences, setSessionReferences] = React.useState<Reference[]>([]);
+  const [pinnedReferences, setPinnedReferences] = React.useState<Reference[]>([]);
 
   const wsRef = React.useRef<WebSocket | null>(null);
   const micStreamRef = React.useRef<MediaStream | null>(null);
@@ -373,6 +388,120 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
     fetchHelpTranslation(normalized, { force: true });
   }, [sosMode, lastTutorText, fetchHelpTranslation, helpTranslation]);
 
+  // Load pinned references on mount
+  React.useEffect(() => {
+    if (!userId) return;
+
+    const loadPinnedReferences = async () => {
+      try {
+        const pinned = await listPinnedReferences(userId);
+        if (isMountedRef.current) {
+          setPinnedReferences(pinned);
+        }
+      } catch (error) {
+        console.error("Failed to load pinned references:", error);
+      }
+    };
+
+    loadPinnedReferences();
+  }, [userId]);
+
+  // Reference handlers
+  const handleSaveDetectedReference = React.useCallback(
+    async (ref: DetectedReference) => {
+      if (!userId) return;
+
+      try {
+        const saved = await createReference({
+          userId,
+          conversationId: session.id,
+          title: ref.title,
+          referenceType: ref.type,
+          source: ref.source || null,
+          detectedContext: ref.context,
+          detectionMethod: "auto",
+        });
+
+        // Move from detected to session references
+        setDetectedReferences((prev) => prev.filter((r) => r.title !== ref.title));
+        setSessionReferences((prev) => [...prev, saved]);
+      } catch (error) {
+        console.error("Failed to save reference:", error);
+      }
+    },
+    [userId, session.id]
+  );
+
+  const handlePinReference = React.useCallback(
+    async (ref: Reference) => {
+      try {
+        await updateReference(ref.id, { isPinned: true });
+        const updated = { ...ref, isPinned: true };
+
+        setSessionReferences((prev) =>
+          prev.map((r) => (r.id === ref.id ? updated : r))
+        );
+        setPinnedReferences((prev) => {
+          if (prev.some((r) => r.id === ref.id)) {
+            return prev.map((r) => (r.id === ref.id ? updated : r));
+          }
+          return [...prev, updated];
+        });
+      } catch (error) {
+        console.error("Failed to pin reference:", error);
+      }
+    },
+    []
+  );
+
+  const handleUnpinReference = React.useCallback(
+    async (ref: Reference) => {
+      try {
+        await updateReference(ref.id, { isPinned: false });
+        const updated = { ...ref, isPinned: false };
+
+        setSessionReferences((prev) =>
+          prev.map((r) => (r.id === ref.id ? updated : r))
+        );
+        setPinnedReferences((prev) => prev.filter((r) => r.id !== ref.id));
+      } catch (error) {
+        console.error("Failed to unpin reference:", error);
+      }
+    },
+    []
+  );
+
+  const handleDeleteReference = React.useCallback(
+    async (ref: Reference) => {
+      try {
+        await deleteReference(ref.id);
+        setSessionReferences((prev) => prev.filter((r) => r.id !== ref.id));
+        setPinnedReferences((prev) => prev.filter((r) => r.id !== ref.id));
+      } catch (error) {
+        console.error("Failed to delete reference:", error);
+      }
+    },
+    []
+  );
+
+  const handleManualAddReference = React.useCallback(
+    async (data: Omit<CreateReferenceRequest, 'userId' | 'conversationId'>) => {
+      if (!userId) return;
+
+      try {
+        const saved = await createReference({
+          ...data,
+          userId,
+          conversationId: session.id,
+        });
+        setSessionReferences((prev) => [...prev, saved]);
+      } catch (error) {
+        console.error("Failed to add reference:", error);
+      }
+    },
+    [userId, session.id]
+  );
+
   const enqueueAudioPlayback = React.useCallback((base64: string, mime?: string) => {
     if (!base64) {
       return;
@@ -500,6 +629,17 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
           }
           break;
         case "guidance_nudge":
+          break;
+        case "references_detected":
+          if (Array.isArray(payload.references) && payload.references.length > 0) {
+            setDetectedReferences((prev) => {
+              // Avoid duplicates by title
+              const newRefs = payload.references.filter(
+                (r: DetectedReference) => !prev.some((p) => p.title === r.title)
+              );
+              return [...prev, ...newRefs];
+            });
+          }
           break;
         default:
           break;
@@ -713,16 +853,34 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
           </div>
         </div>
 
-        <button
-          onClick={handleSosToggle}
-          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-            sosMode
-              ? "bg-yellow text-textMain shadow-md"
-              : "bg-white border-2 border-gray-200 text-gray-400 hover:border-yellow hover:text-yellow"
-          }`}
-        >
-          <HelpCircle size={20} />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowReferences(true)}
+            className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+              showReferences
+                ? "bg-emerald-500 text-white shadow-md"
+                : "bg-white border-2 border-gray-200 text-gray-400 hover:border-emerald-400 hover:text-emerald-500"
+            }`}
+          >
+            <BookOpen size={20} />
+            {detectedReferences.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-xs font-bold text-white flex items-center justify-center">
+                {detectedReferences.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={handleSosToggle}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+              sosMode
+                ? "bg-yellow text-textMain shadow-md"
+                : "bg-white border-2 border-gray-200 text-gray-400 hover:border-yellow hover:text-yellow"
+            }`}
+          >
+            <HelpCircle size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 relative flex items-center justify-center z-10">
@@ -845,6 +1003,22 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
           </button>
         </div>
       </div>
+
+      {/* Reference Library Panel */}
+      <ReferencePanel
+        isOpen={showReferences}
+        onClose={() => setShowReferences(false)}
+        detectedReferences={detectedReferences}
+        sessionReferences={sessionReferences}
+        pinnedReferences={pinnedReferences}
+        userId={userId || ""}
+        conversationId={session.id}
+        onSaveDetected={handleSaveDetectedReference}
+        onPin={handlePinReference}
+        onUnpin={handleUnpinReference}
+        onDelete={handleDeleteReference}
+        onManualAdd={handleManualAddReference}
+      />
     </div>
   );
 }
