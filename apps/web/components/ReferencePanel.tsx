@@ -42,10 +42,10 @@ export function ReferencePanel({
   return (
     <>
       <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <SheetContent side="right" className="bg-gradient-to-b from-[#1a1a2e] to-[#16162a] border-white/10 overflow-y-auto">
-          <SheetHeader className="border-b border-white/10 pb-4">
-            <SheetTitle className="flex items-center gap-2 text-white">
-              <BookOpen className="w-5 h-5 text-emerald-400" />
+        <SheetContent side="right" className="bg-white border-black/10 overflow-y-auto">
+          <SheetHeader className="border-b border-black/10 pb-4">
+            <SheetTitle className="flex items-center gap-2 text-textMain">
+              <BookOpen className="w-5 h-5 text-[#00bdd0]" />
               Reference Library
             </SheetTitle>
           </SheetHeader>
@@ -55,8 +55,8 @@ export function ReferencePanel({
             {detectedReferences.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <h3 className="text-sm font-medium text-white/80">
+                  <Sparkles className="w-4 h-4 text-[#fcd53a]" />
+                  <h3 className="text-base font-medium text-textMain">
                     Just Detected ({detectedReferences.length})
                   </h3>
                 </div>
@@ -76,7 +76,7 @@ export function ReferencePanel({
             {/* Session References Section */}
             {sessionReferences.length > 0 && (
               <section>
-                <h3 className="text-sm font-medium text-white/80 mb-3">
+                <h3 className="text-base font-medium text-textMain mb-3">
                   This Session ({sessionReferences.length})
                 </h3>
                 <div className="space-y-2">
@@ -97,8 +97,8 @@ export function ReferencePanel({
             {pinnedReferences.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 mb-3">
-                  <Pin className="w-4 h-4 text-amber-400" />
-                  <h3 className="text-sm font-medium text-white/80">
+                  <Pin className="w-4 h-4 text-[#fcd53a]" />
+                  <h3 className="text-base font-medium text-textMain">
                     Pinned ({pinnedReferences.length})
                   </h3>
                 </div>
@@ -121,8 +121,8 @@ export function ReferencePanel({
               sessionReferences.length === 0 &&
               pinnedReferences.length === 0 && (
                 <div className="text-center py-8">
-                  <BookOpen className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                  <p className="text-white/40 text-sm">
+                  <BookOpen className="w-12 h-12 text-textSoft/30 mx-auto mb-3" />
+                  <p className="text-textSoft text-base">
                     No references yet. Songs, lyrics, and cultural references mentioned during your session will appear here.
                   </p>
                 </div>
@@ -131,7 +131,7 @@ export function ReferencePanel({
             {/* Add Manually Button */}
             <button
               onClick={() => setShowPasteDialog(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-white/5 border border-dashed border-white/20 text-white/60 hover:text-white hover:border-white/40 hover:bg-white/10 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-plaster/50 border border-dashed border-black/15 text-textSoft hover:text-textMain hover:border-pink/40 hover:bg-plaster transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>Paste Content Manually</span>

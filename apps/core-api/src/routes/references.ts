@@ -177,7 +177,7 @@ references.get('/', async (c) => {
     const result = await query(c.env, sql, params);
 
     // Parse tags JSON for each reference
-    const references = result.rows.map((row: Record<string, unknown>) => ({
+    const references = result.map((row: Record<string, unknown>) => ({
       ...row,
       tags: row.tags ? JSON.parse(row.tags as string) : null,
     }));
@@ -225,7 +225,7 @@ references.get('/pinned', async (c) => {
     );
 
     // Parse tags JSON for each reference
-    const references = result.rows.map((row: Record<string, unknown>) => ({
+    const references = result.map((row: Record<string, unknown>) => ({
       ...row,
       tags: row.tags ? JSON.parse(row.tags as string) : null,
     }));
@@ -271,11 +271,11 @@ references.get('/:id', async (c) => {
       [id]
     );
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return c.json({ error: 'Reference not found' }, 404);
     }
 
-    const row = result.rows[0] as Record<string, unknown>;
+    const row = result[0] as Record<string, unknown>;
     const reference = {
       ...row,
       tags: row.tags ? JSON.parse(row.tags as string) : null,
@@ -399,7 +399,7 @@ references.delete('/:id', async (c) => {
       [id]
     );
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return c.json({ error: 'Reference not found' }, 404);
     }
 

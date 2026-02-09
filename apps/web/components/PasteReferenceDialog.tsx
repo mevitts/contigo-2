@@ -61,49 +61,49 @@ export function PasteReferenceDialog({ isOpen, onClose, onSave }: PasteReference
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#1a1a2e] rounded-2xl border border-white/10 w-full max-w-md mx-4 shadow-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <h2 className="text-lg font-semibold text-white">Add Reference</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl border border-black/10 w-full max-w-md mx-4 shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-black/10">
+          <h2 className="text-xl font-semibold text-textMain">Add Reference</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-black/5 text-textSoft hover:text-textMain transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {error && (
-            <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-sm">
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-white/80 mb-1.5">
-              Title <span className="text-red-400">*</span>
+            <label className="block text-sm font-medium text-textMain mb-1.5">
+              Title <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., La Bamba, Don Quixote"
-              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-white/30 transition-colors"
+              className="w-full px-3 py-2.5 rounded-xl bg-plaster/50 border border-black/10 text-textMain placeholder-textSoft focus:outline-none focus:border-pink/40 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white/80 mb-1.5">
+            <label className="block text-sm font-medium text-textMain mb-1.5">
               Type
             </label>
             <select
               value={referenceType}
               onChange={(e) => setReferenceType(e.target.value as ReferenceType)}
-              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-white/30 transition-colors"
+              className="w-full px-3 py-2.5 rounded-xl bg-plaster/50 border border-black/10 text-textMain focus:outline-none focus:border-pink/40 transition-colors"
             >
               {REFERENCE_TYPES.map((type) => (
-                <option key={type.value} value={type.value} className="bg-[#1a1a2e]">
+                <option key={type.value} value={type.value}>
                   {type.label}
                 </option>
               ))}
@@ -111,7 +111,7 @@ export function PasteReferenceDialog({ isOpen, onClose, onSave }: PasteReference
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white/80 mb-1.5">
+            <label className="block text-sm font-medium text-textMain mb-1.5">
               URL
             </label>
             <input
@@ -119,12 +119,12 @@ export function PasteReferenceDialog({ isOpen, onClose, onSave }: PasteReference
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://..."
-              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-white/30 transition-colors"
+              className="w-full px-3 py-2.5 rounded-xl bg-plaster/50 border border-black/10 text-textMain placeholder-textSoft focus:outline-none focus:border-pink/40 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white/80 mb-1.5">
+            <label className="block text-sm font-medium text-textMain mb-1.5">
               Content (lyrics, excerpt, notes)
             </label>
             <textarea
@@ -132,12 +132,12 @@ export function PasteReferenceDialog({ isOpen, onClose, onSave }: PasteReference
               onChange={(e) => setContentText(e.target.value)}
               placeholder="Paste lyrics, excerpt, or notes here..."
               rows={4}
-              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-white/30 transition-colors resize-none"
+              className="w-full px-3 py-2.5 rounded-xl bg-plaster/50 border border-black/10 text-textMain placeholder-textSoft focus:outline-none focus:border-pink/40 transition-colors resize-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white/80 mb-1.5">
+            <label className="block text-sm font-medium text-textMain mb-1.5">
               Artist / Author / Source
             </label>
             <input
@@ -145,7 +145,7 @@ export function PasteReferenceDialog({ isOpen, onClose, onSave }: PasteReference
               value={source}
               onChange={(e) => setSource(e.target.value)}
               placeholder="e.g., Ritchie Valens, Cervantes"
-              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-white/30 transition-colors"
+              className="w-full px-3 py-2.5 rounded-xl bg-plaster/50 border border-black/10 text-textMain placeholder-textSoft focus:outline-none focus:border-pink/40 transition-colors"
             />
           </div>
 
@@ -153,13 +153,13 @@ export function PasteReferenceDialog({ isOpen, onClose, onSave }: PasteReference
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 rounded-lg bg-white/5 text-white/80 hover:bg-white/10 transition-colors"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-plaster text-textSoft hover:bg-plaster/80 transition-colors font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-colors"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-pink text-white font-semibold hover:bg-pink/90 transition-colors"
             >
               Save
             </button>

@@ -10,14 +10,14 @@ interface LoginViewProps {
 export function LoginView({ onGoogleLogin, onDemoLogin, isLoading = false, error }: LoginViewProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-plaster px-6 py-12 text-center">
-      <div className="flex items-center gap-2 mb-8 text-textSoft uppercase tracking-[0.5em] font-bold">
-        <Globe size={18} />
+      <div className="flex items-center gap-2 mb-8 text-textSoft uppercase tracking-[0.5em] font-bold text-base">
+        <Globe size={22} />
         <span>Contigo</span>
       </div>
 
       <div className="max-w-xl w-full space-y-6">
-        <h1 className="text-4xl md:text-5xl font-serif text-textMain">Bienvenida</h1>
-        <p className="text-textSoft font-sans leading-relaxed">
+        <h1 className="text-5xl md:text-6xl font-serif text-textMain">Bienvenida</h1>
+        <p className="text-textSoft font-sans leading-relaxed text-lg">
           Sign in with Google to use your real Contigo account. You can also explore with the demo profile while we finish your setup.
         </p>
 
@@ -47,7 +47,7 @@ export function LoginView({ onGoogleLogin, onDemoLogin, isLoading = false, error
           </button>
         </div>
 
-        <p className="text-xs text-textSoft uppercase tracking-[0.4em]">Secured by Google</p>
+        <p className="text-sm text-textSoft uppercase tracking-[0.4em]">Secured by Google</p>
       </div>
     </div>
   );

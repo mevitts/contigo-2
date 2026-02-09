@@ -32,20 +32,20 @@ export function SessionHistory({
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-pink rounded-full flex items-center justify-center shadow-lg">
-               <Book className="w-6 h-6 text-white" />
+            <div className="w-14 h-14 bg-pink rounded-full flex items-center justify-center shadow-lg">
+               <Book className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-serif text-textMain">Notebook</h1>
-              <p className="text-textSoft uppercase tracking-widest text-xs font-bold">Your conversation history</p>
+              <h1 className="text-4xl md:text-5xl font-serif text-textMain">Notebook</h1>
+              <p className="text-textSoft uppercase tracking-widest text-sm font-bold">Your conversation history</p>
             </div>
           </div>
           <button
             onClick={onRefresh}
-            className="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-sky text-sky hover:bg-sky/10 transition-colors font-bold uppercase text-xs tracking-widest"
+            className="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-sky text-sky hover:bg-sky/10 transition-colors font-bold uppercase text-sm tracking-widest"
             disabled={isLoading}
           >
-            <RefreshCcw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            <RefreshCcw className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </button>
         </div>
@@ -63,8 +63,8 @@ export function SessionHistory({
             className="bg-white border-2 border-dashed border-pink/20 rounded-3xl p-12 text-center space-y-4"
           >
             <Calendar className="w-16 h-16 text-pink/40 mx-auto" />
-            <h2 className="text-xl font-serif text-textMain">No sessions yet</h2>
-            <p className="text-textSoft">
+            <h2 className="text-2xl font-serif text-textMain">No sessions yet</h2>
+            <p className="text-base text-textSoft">
               Start a conversation to see it appear here.
             </p>
           </motion.div>
@@ -83,7 +83,7 @@ export function SessionHistory({
                 
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-4">
-                    <span className="text-xs font-bold uppercase tracking-widest text-pink bg-pink/10 px-2 py-1 rounded">
+                    <span className="text-sm font-bold uppercase tracking-widest text-pink bg-pink/10 px-2 py-1 rounded">
                       {session.language?.toUpperCase() ?? "ES"}
                     </span>
                     {onDelete && (
@@ -92,7 +92,7 @@ export function SessionHistory({
                           e.stopPropagation();
                           onDelete(session.id);
                         }}
-                        className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                        className="text-gray-400 hover:text-red-500 transition-colors p-1"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -102,7 +102,7 @@ export function SessionHistory({
                   <h3 className="font-serif text-2xl text-textMain mb-2 line-clamp-2">
                     {titleDateFormatter.format(new Date(session.createdAt))}
                   </h3>
-                  <p className="text-xs font-bold uppercase tracking-widest text-textSoft">
+                  <p className="text-sm font-bold uppercase tracking-widest text-textSoft">
                     {session.agentDisplayName ?? "Contigo Coach"}
                   </p>
                 </div>

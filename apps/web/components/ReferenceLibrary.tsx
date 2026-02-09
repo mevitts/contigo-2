@@ -14,14 +14,14 @@ interface ReferenceLibraryProps {
   userId: string;
 }
 
-const TYPE_CONFIG: Record<ReferenceType, { color: string; label: string }> = {
-  SONG: { color: "bg-purple-400/20 text-purple-400 border-purple-400/30", label: "Song" },
-  LYRICS: { color: "bg-pink-400/20 text-pink-400 border-pink-400/30", label: "Lyrics" },
-  ARTICLE: { color: "bg-blue-400/20 text-blue-400 border-blue-400/30", label: "Article" },
-  VIDEO: { color: "bg-red-400/20 text-red-400 border-red-400/30", label: "Video" },
-  BOOK_EXCERPT: { color: "bg-amber-400/20 text-amber-400 border-amber-400/30", label: "Book" },
-  CULTURAL: { color: "bg-emerald-400/20 text-emerald-400 border-emerald-400/30", label: "Cultural" },
-  OTHER: { color: "bg-gray-400/20 text-gray-400 border-gray-400/30", label: "Other" },
+const TYPE_CONFIG: Record<ReferenceType, { color: string; label: string; accent: string; cardBg: string }> = {
+  SONG: { color: "bg-[#fce4f0] text-[#e6007e] border-[#e6007e]/20", label: "Song", accent: "border-l-[#e6007e]", cardBg: "bg-[#fef8fb]" },
+  LYRICS: { color: "bg-[#e0f7fa] text-[#00bdd0] border-[#00bdd0]/20", label: "Lyrics", accent: "border-l-[#00bdd0]", cardBg: "bg-[#f6fdfe]" },
+  ARTICLE: { color: "bg-[#e3f2fd] text-[#2d9fec] border-[#2d9fec]/20", label: "Article", accent: "border-l-[#2d9fec]", cardBg: "bg-[#f7faff]" },
+  VIDEO: { color: "bg-[#f1f8e9] text-[#7cb342] border-[#a7dc41]/20", label: "Video", accent: "border-l-[#a7dc41]", cardBg: "bg-[#f9fcf5]" },
+  BOOK_EXCERPT: { color: "bg-[#fff9e6] text-[#c9a800] border-[#fcd53a]/20", label: "Book", accent: "border-l-[#fcd53a]", cardBg: "bg-[#fffdf5]" },
+  CULTURAL: { color: "bg-[#e8f5e9] text-[#00b876] border-[#00d891]/20", label: "Cultural", accent: "border-l-[#00d891]", cardBg: "bg-[#f5fef8]" },
+  OTHER: { color: "bg-[#f5f0ea] text-[#8c8c8c] border-[#8c8c8c]/20", label: "Other", accent: "border-l-[#8c8c8c]", cardBg: "bg-[#faf8f5]" },
 };
 
 const FILTER_OPTIONS: { value: ReferenceType | "ALL"; label: string }[] = [
@@ -144,25 +144,25 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
   const pinnedCount = references.filter((r) => r.isPinned).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1a1a2e] to-[#16162a]">
+    <div className="min-h-screen bg-plaster">
       {/* Header */}
-      <div className="bg-[#1a1a2e]/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+      <div className="bg-white/80 backdrop-blur-md border-b-2 border-b-transparent sticky top-0 z-10" style={{ borderImage: "linear-gradient(to right, #e6007e, #2d9fec, #00bdd0, #00d891) 1" }}>
+        <div className="max-w-6xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <BookOpen className="w-6 h-6 text-emerald-400" />
-              <h1 className="text-xl font-semibold text-white">Reference Library</h1>
+              <BookOpen className="w-7 h-7 text-[#00bdd0]" />
+              <h1 className="text-3xl font-serif text-textMain">Reference Library</h1>
               {pinnedCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-400 text-xs">
+                <span className="px-2.5 py-1 rounded-full bg-[#fcd53a]/20 text-[#c9a800] text-sm font-medium">
                   {pinnedCount} pinned
                 </span>
               )}
             </div>
             <button
               onClick={() => setShowAddDialog(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink text-white font-semibold hover:bg-pink/90 transition-colors text-base"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Add Reference
             </button>
           </div>
@@ -170,26 +170,26 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
           <div className="flex items-center gap-4">
             {/* Search */}
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-textSoft" />
               <input
                 type="text"
                 placeholder="Search references..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-white/30 transition-colors"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-black/10 text-textMain placeholder-textSoft focus:outline-none focus:border-pink/40 transition-colors text-base"
               />
             </div>
 
             {/* Filter */}
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-white/40" />
+              <Filter className="w-5 h-5 text-textSoft" />
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value as ReferenceType | "ALL")}
-                className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-white/30 transition-colors"
+                className="px-3 py-2.5 rounded-xl bg-white border border-black/10 text-textMain focus:outline-none focus:border-pink/40 transition-colors text-base"
               >
                 {FILTER_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value} className="bg-[#1a1a2e]">
+                  <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
                 ))}
@@ -203,28 +203,28 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
       <div className="max-w-6xl mx-auto px-6 py-8">
         {loading ? (
           <div className="text-center py-12">
-            <div className="animate-spin w-8 h-8 border-2 border-white/20 border-t-emerald-400 rounded-full mx-auto" />
-            <p className="text-white/40 mt-4">Loading your references...</p>
+            <div className="animate-spin w-8 h-8 border-2 border-black/10 border-t-pink rounded-full mx-auto" />
+            <p className="text-textSoft mt-4 text-base">Loading your references...</p>
           </div>
         ) : error ? (
           <div className="text-center py-12">
-            <p className="text-red-400">{error}</p>
+            <p className="text-red-500 text-base">{error}</p>
             <button
               onClick={loadReferences}
-              className="mt-4 px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
+              className="mt-4 px-5 py-2.5 rounded-xl bg-white border border-black/10 text-textMain hover:bg-gray-50 transition-colors"
             >
               Try Again
             </button>
           </div>
         ) : filteredReferences.length === 0 ? (
           <div className="text-center py-12">
-            <BookOpen className="w-16 h-16 text-white/10 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white/60 mb-2">
+            <BookOpen className="w-16 h-16 text-textSoft/30 mx-auto mb-4" />
+            <h3 className="text-xl font-medium text-textMain mb-2">
               {searchQuery || filterType !== "ALL"
                 ? "No matching references"
                 : "Your library is empty"}
             </h3>
-            <p className="text-white/40 mb-6">
+            <p className="text-textSoft mb-6 text-base">
               {searchQuery || filterType !== "ALL"
                 ? "Try adjusting your search or filter"
                 : "Add songs, lyrics, and cultural references you want to remember"}
@@ -232,7 +232,7 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
             {!searchQuery && filterType === "ALL" && (
               <button
                 onClick={() => setShowAddDialog(true)}
-                className="px-4 py-2 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-colors"
+                className="px-5 py-2.5 rounded-xl bg-pink text-white font-semibold hover:bg-pink/90 transition-colors"
               >
                 Add Your First Reference
               </button>
@@ -248,27 +248,27 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className={`bg-white/5 rounded-xl p-4 border border-white/10 hover:border-white/20 cursor-pointer transition-colors ${
-                    selectedReference?.id === ref.id ? "border-emerald-400/50" : ""
+                  className={`${config.cardBg} rounded-2xl p-5 border-l-4 ${config.accent} border border-black/8 hover:border-pink/30 cursor-pointer transition-colors shadow-sm ${
+                    selectedReference?.id === ref.id ? "border-pink/50 shadow-md" : ""
                   }`}
                   onClick={() => setSelectedReference(ref)}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-white truncate">{ref.title}</h3>
+                        <h3 className="font-medium text-textMain truncate text-lg">{ref.title}</h3>
                         {ref.isPinned && (
-                          <Pin className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                          <Pin className="w-4 h-4 text-[#fcd53a] flex-shrink-0" />
                         )}
                       </div>
                       {ref.source && (
-                        <p className="text-sm text-white/60 truncate">{ref.source}</p>
+                        <p className="text-base text-textSoft truncate">{ref.source}</p>
                       )}
                       <div className="flex items-center gap-2 mt-2">
-                        <span className={`text-xs px-2 py-0.5 rounded border ${config.color}`}>
+                        <span className={`text-sm px-2.5 py-1 rounded-lg border ${config.color}`}>
                           {config.label}
                         </span>
-                        <span className="text-xs text-white/30">
+                        <span className="text-sm text-textSoft">
                           {new Date(ref.createdAt).toLocaleDateString()}
                         </span>
                       </div>
@@ -276,19 +276,19 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
                   </div>
 
                   {ref.contentText && (
-                    <p className="text-sm text-white/40 mt-3 line-clamp-2">
+                    <p className="text-base text-textSoft mt-3 line-clamp-2">
                       {ref.contentText}
                     </p>
                   )}
 
-                  <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-white/5">
+                  <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-black/5">
                     {ref.url && (
                       <a
                         href={ref.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-black/5 text-textSoft hover:text-textMain transition-colors"
                         title="Open link"
                       >
                         <ExternalLink className="w-4 h-4" />
@@ -300,7 +300,7 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
                           e.stopPropagation();
                           handleUnpin(ref);
                         }}
-                        className="p-1.5 rounded-lg hover:bg-white/10 text-amber-400 hover:text-amber-300 transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-[#fcd53a]/10 text-[#fcd53a] hover:text-[#c9a800] transition-colors"
                         title="Unpin"
                       >
                         <PinOff className="w-4 h-4" />
@@ -311,7 +311,7 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
                           e.stopPropagation();
                           handlePin(ref);
                         }}
-                        className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-black/5 text-textSoft hover:text-textMain transition-colors"
                         title="Pin"
                       >
                         <Pin className="w-4 h-4" />
@@ -322,7 +322,7 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
                         e.stopPropagation();
                         handleDelete(ref);
                       }}
-                      className="p-1.5 rounded-lg hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-textSoft hover:text-red-500 transition-colors"
                       title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -337,23 +337,23 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
 
       {/* Detail Panel */}
       {selectedReference && (
-        <div className="fixed inset-y-0 right-0 w-full max-w-md bg-[#1a1a2e] border-l border-white/10 shadow-2xl z-20 overflow-y-auto">
+        <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white border-l border-black/10 shadow-2xl z-20 overflow-y-auto">
           <div className="p-6">
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-xl font-semibold text-white">{selectedReference.title}</h2>
+                  <h2 className="text-2xl font-semibold text-textMain">{selectedReference.title}</h2>
                   {selectedReference.isPinned && (
-                    <Pin className="w-4 h-4 text-amber-400" />
+                    <Pin className="w-4 h-4 text-[#fcd53a]" />
                   )}
                 </div>
                 {selectedReference.source && (
-                  <p className="text-white/60">{selectedReference.source}</p>
+                  <p className="text-base text-textSoft">{selectedReference.source}</p>
                 )}
               </div>
               <button
                 onClick={() => setSelectedReference(null)}
-                className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                className="p-2 rounded-lg hover:bg-black/5 text-textSoft hover:text-textMain transition-colors"
               >
                 <span className="sr-only">Close</span>
                 &times;
@@ -363,13 +363,13 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span
-                  className={`text-xs px-2 py-1 rounded border ${
+                  className={`text-base px-2.5 py-1 rounded-lg border ${
                     TYPE_CONFIG[selectedReference.referenceType]?.color || TYPE_CONFIG.OTHER.color
                   }`}
                 >
                   {TYPE_CONFIG[selectedReference.referenceType]?.label || "Other"}
                 </span>
-                <span className="text-xs text-white/40">
+                <span className="text-base text-textSoft">
                   Added {new Date(selectedReference.createdAt).toLocaleDateString()}
                 </span>
               </div>
@@ -379,50 +379,50 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
                   href={selectedReference.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
+                  className="flex items-center gap-2 text-[#2d9fec] hover:text-[#2d9fec]/80 transition-colors"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  <span className="text-sm underline">{selectedReference.url}</span>
+                  <span className="text-base underline">{selectedReference.url}</span>
                 </a>
               )}
 
               {selectedReference.contentText && (
-                <div className="bg-white/5 rounded-lg p-4">
-                  <h4 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">
+                <div className="bg-plaster/50 rounded-xl p-4">
+                  <h4 className="text-base font-medium text-textSoft uppercase tracking-wider mb-2">
                     Content
                   </h4>
-                  <p className="text-white/80 whitespace-pre-wrap">
+                  <p className="text-textMain whitespace-pre-wrap">
                     {selectedReference.contentText}
                   </p>
                 </div>
               )}
 
               {selectedReference.detectedContext && (
-                <div className="bg-white/5 rounded-lg p-4">
-                  <h4 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">
+                <div className="bg-plaster/50 rounded-xl p-4">
+                  <h4 className="text-base font-medium text-textSoft uppercase tracking-wider mb-2">
                     Context
                   </h4>
-                  <p className="text-white/60 text-sm">
+                  <p className="text-textSoft text-base">
                     {selectedReference.detectedContext}
                   </p>
                 </div>
               )}
 
               {selectedReference.notes && (
-                <div className="bg-white/5 rounded-lg p-4">
-                  <h4 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">
+                <div className="bg-plaster/50 rounded-xl p-4">
+                  <h4 className="text-base font-medium text-textSoft uppercase tracking-wider mb-2">
                     Notes
                   </h4>
-                  <p className="text-white/80 text-sm">{selectedReference.notes}</p>
+                  <p className="text-textMain text-base">{selectedReference.notes}</p>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2 mt-6 pt-6 border-t border-white/10">
+            <div className="flex items-center gap-2 mt-6 pt-6 border-t border-black/10">
               {selectedReference.isPinned ? (
                 <button
                   onClick={() => handleUnpin(selectedReference)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-400/20 text-amber-400 hover:bg-amber-400/30 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#fcd53a]/15 text-[#c9a800] hover:bg-[#fcd53a]/25 transition-colors font-medium"
                 >
                   <PinOff className="w-4 h-4" />
                   Unpin
@@ -430,7 +430,7 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
               ) : (
                 <button
                   onClick={() => handlePin(selectedReference)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-plaster text-textMain hover:bg-plaster/80 transition-colors font-medium"
                 >
                   <Pin className="w-4 h-4" />
                   Pin to Library
@@ -438,7 +438,7 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
               )}
               <button
                 onClick={() => handleDelete(selectedReference)}
-                className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                className="px-4 py-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

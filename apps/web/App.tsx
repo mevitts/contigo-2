@@ -317,16 +317,15 @@ export default function App() {
     void refreshSessions();
   }, [user?.id, refreshSessions]);
 
-  // Fetch weekly spotlight article when dashboard is shown
-  React.useEffect(() => {
-    if (view !== "dashboard" || !user?.id) return;
-
-    let cancelled = false;
-    getCurrentSpotlight().then((article) => {
-      if (!cancelled) setSpotlightArticle(article);
-    });
-    return () => { cancelled = true; };
-  }, [view, user?.id]);
+  // Spotlight article – disabled for now (endpoint not deployed)
+  // React.useEffect(() => {
+  //   if (view !== "dashboard" || !user?.id) return;
+  //   let cancelled = false;
+  //   getCurrentSpotlight().then((article) => {
+  //     if (!cancelled) setSpotlightArticle(article);
+  //   });
+  //   return () => { cancelled = true; };
+  // }, [view, user?.id]);
 
   const handleReadArticle = React.useCallback((article: WeeklyArticle) => {
     setActiveArticle(article);
@@ -593,9 +592,9 @@ export default function App() {
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <button
               onClick={() => setView("dashboard")}
-              className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest hover:text-pink transition-colors"
+              className="flex items-center gap-2 text-base font-bold uppercase tracking-widest hover:text-pink transition-colors"
             >
-              <ArrowLeft size={16} />
+              <ArrowLeft size={20} />
               Back to Dashboard
             </button>
           </div>
@@ -639,7 +638,7 @@ export default function App() {
             onGoToLibrary={() => setView("library")}
             sessions={sessions}
             isLoading={sessionsLoading || isStartingSession}
-            spotlightArticle={spotlightArticle}
+            spotlightArticle={null}
             onReadArticle={handleReadArticle}
           />
         )}

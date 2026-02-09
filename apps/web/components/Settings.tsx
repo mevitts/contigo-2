@@ -35,13 +35,13 @@ export function Settings({
           animate={{ opacity: 1, y: 0 }}
           className="space-y-2"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-yellow rounded-full flex items-center justify-center shadow-lg">
-               <SettingsIcon className="w-6 h-6 text-textMain" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-yellow rounded-full flex items-center justify-center shadow-lg">
+               <SettingsIcon className="w-7 h-7 text-textMain" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-serif text-textMain">Passport</h1>
-              <p className="text-textSoft uppercase tracking-widest text-xs font-bold">Your preferences & account</p>
+              <h1 className="text-4xl md:text-5xl font-serif text-textMain">Passport</h1>
+              <p className="text-textSoft uppercase tracking-widest text-sm font-bold">Your preferences & account</p>
             </div>
           </div>
         </motion.div>
@@ -55,24 +55,24 @@ export function Settings({
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-yellow opacity-10 rounded-bl-full -mr-8 -mt-8" />
           
-          <div className="flex items-center gap-4 mb-8 relative z-10">
-            <div className="w-16 h-16 rounded-full border-4 border-yellow overflow-hidden">
+          <div className="flex items-center gap-5 mb-8 relative z-10">
+            <div className="w-20 h-20 rounded-full border-4 border-yellow overflow-hidden">
               <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80" className="w-full h-full object-cover" alt="Profile" />
             </div>
             <div>
-              <h2 className="font-serif text-2xl text-textMain">{fullName}</h2>
-              <span className="bg-yellow text-textMain text-xs font-bold px-2 py-1 rounded uppercase tracking-widest">{membershipTag}</span>
+              <h2 className="font-serif text-3xl text-textMain">{fullName}</h2>
+              <span className="bg-yellow text-textMain text-sm font-bold px-3 py-1 rounded uppercase tracking-widest">{membershipTag}</span>
             </div>
           </div>
 
           <div className="space-y-4 relative z-10">
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <span className="text-textSoft font-bold text-xs uppercase tracking-widest">Email</span>
-              <span className="font-medium text-textMain">{email}</span>
+              <span className="text-textSoft font-bold text-sm uppercase tracking-widest">Email</span>
+              <span className="font-medium text-textMain text-base">{email}</span>
             </div>
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <span className="text-textSoft font-bold text-xs uppercase tracking-widest">Account ID</span>
-              <span className="font-mono text-xs text-textMain bg-gray-100 px-2 py-1 rounded">{accountId.substring(0, 12)}...</span>
+              <span className="text-textSoft font-bold text-sm uppercase tracking-widest">Account ID</span>
+              <span className="font-mono text-sm text-textMain bg-gray-100 px-2 py-1 rounded">{accountId.substring(0, 12)}...</span>
             </div>
           </div>
         </motion.section>
@@ -89,16 +89,16 @@ export function Settings({
               </div>
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] font-bold text-white/80">Demo Access</p>
+                  <p className="text-sm uppercase tracking-[0.3em] font-bold text-white/80">Demo Access</p>
                   <h3 className="text-2xl font-serif leading-tight">Upgrade to unlock real coaching time</h3>
                 </div>
-                <p className="text-white/90 text-sm leading-relaxed">
+                <p className="text-white/90 text-base leading-relaxed">
                   Demo tutors reset every few minutes. Go premium for unlimited live sessions, personalized
                   learning plans, and SOS translations without limits.
                 </p>
                 <button
                   onClick={onUpgrade}
-                  className="inline-flex items-center gap-2 bg-white text-textMain font-bold uppercase tracking-widest text-xs px-4 py-3 rounded-2xl shadow-md hover:-translate-y-0.5 transition-transform"
+                  className="inline-flex items-center gap-2 bg-white text-textMain font-bold uppercase tracking-widest text-sm px-5 py-3 rounded-2xl shadow-md hover:-translate-y-0.5 transition-transform"
                 >
                   <span>Continue to Premium</span>
                 </button>
@@ -114,16 +114,16 @@ export function Settings({
           transition={{ delay: 0.2 }}
           className="space-y-6"
         >
-          <h2 className="font-serif text-2xl text-textMain px-2">Learning Preferences</h2>
+          <h2 className="font-serif text-3xl text-textMain px-2">Learning Preferences</h2>
           
           <div className="bg-white rounded-3xl p-8 shadow-sm space-y-8">
             {/* Difficulty */}
             <div className="space-y-4">
-              <label className="text-xs font-bold uppercase tracking-widest text-textSoft flex items-center gap-2">
-                <Mic size={14} />
+              <label className="text-sm font-bold uppercase tracking-widest text-textSoft flex items-center gap-2">
+                <Mic size={16} />
                 Difficulty Level
               </label>
-              <div className="text-sm text-gray-600 space-y-1 leading-relaxed">
+              <div className="text-base text-gray-600 space-y-1 leading-relaxed">
                 <p className="font-medium text-textMain/90">
                   These levels set the opening scene; your tutor keeps adjusting during the chat and across future sessions.
                 </p>
@@ -142,7 +142,7 @@ export function Settings({
                   <button
                     key={level}
                     onClick={() => onDifficultyChange(level)}
-                    className={`py-3 rounded-xl text-sm font-bold capitalize transition-all ${
+                    className={`py-3 rounded-xl text-base font-bold capitalize transition-all ${
                       difficulty === level
                         ? "bg-pink text-white shadow-md scale-105"
                         : "bg-gray-50 text-gray-400 hover:bg-gray-100"
@@ -158,15 +158,15 @@ export function Settings({
             {difficulty === "beginner" && onExtraSupportChange && (
               <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-widest text-textSoft">Extra Support</label>
-                  <p className="text-sm text-gray-500">
+                  <label className="text-sm font-bold uppercase tracking-widest text-textSoft">Extra Support</label>
+                  <p className="text-base text-gray-500">
                     Start with simplified phrases, slower pace, and more encouragement.
                     Great for absolute beginners or when you need extra confidence.
                   </p>
                 </div>
                 <button
                   onClick={() => onExtraSupportChange(!extraSupportMode)}
-                  className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
+                  className={`px-4 py-2 rounded-full text-sm font-bold uppercase tracking-widest transition-all ${
                     extraSupportMode
                       ? "bg-pink text-white shadow-md"
                       : "bg-gray-200 text-gray-500 hover:bg-gray-300"
@@ -187,7 +187,7 @@ export function Settings({
         >
           <button
             onClick={onLogout}
-            className="w-full py-4 border-2 border-gray-200 text-gray-400 font-bold uppercase tracking-widest text-xs hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-all rounded-2xl flex items-center justify-center gap-2"
+            className="w-full py-4 border-2 border-gray-300 text-gray-500 font-bold uppercase tracking-widest text-base hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-all rounded-2xl flex items-center justify-center gap-2"
           >
             <LogOut size={16} />
             Sign Out

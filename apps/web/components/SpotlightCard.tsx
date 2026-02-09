@@ -39,23 +39,23 @@ export function SpotlightCard({ article, onReadArticle }: SpotlightCardProps) {
         <div className="flex-1 p-5 md:p-6 flex flex-col gap-3">
           {/* Badge row */}
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1 text-[10px] font-sans font-bold uppercase tracking-[0.15em] text-white/70">
-              <Sparkles size={12} />
+            <span className="flex items-center gap-1 text-xs font-sans font-bold uppercase tracking-[0.15em] text-white/70">
+              <Sparkles size={14} />
               Weekly Spotlight
             </span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-sans font-bold uppercase tracking-wider ${diffClass}`}>
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-sans font-bold uppercase tracking-wider ${diffClass}`}>
               {diffLabel}
             </span>
           </div>
 
           {/* Title */}
-          <h3 className="text-lg md:text-xl font-serif text-white leading-snug line-clamp-2">
+          <h3 className="text-xl md:text-2xl font-serif text-white leading-snug line-clamp-2">
             {article.title}
           </h3>
 
           {/* Author / Source */}
           {(article.author || article.sourceName) && (
-            <p className="text-xs text-white/60 font-sans">
+            <p className="text-sm text-white/60 font-sans">
               {article.author && <span>{article.author}</span>}
               {article.author && article.sourceName && <span> · </span>}
               {article.sourceName && <span>{article.sourceName}</span>}
@@ -64,7 +64,7 @@ export function SpotlightCard({ article, onReadArticle }: SpotlightCardProps) {
 
           {/* Summary teaser */}
           {article.summary && (
-            <p className="text-sm text-white/80 font-sans leading-relaxed line-clamp-2">
+            <p className="text-base text-white/80 font-sans leading-relaxed line-clamp-2">
               {article.summary}
             </p>
           )}
@@ -75,7 +75,7 @@ export function SpotlightCard({ article, onReadArticle }: SpotlightCardProps) {
               {article.tags.slice(0, 4).map((tag) => (
                 <span
                   key={tag}
-                  className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/70 font-sans"
+                  className="text-xs px-2.5 py-0.5 rounded-full bg-white/10 text-white/70 font-sans"
                 >
                   {tag}
                 </span>
@@ -85,7 +85,7 @@ export function SpotlightCard({ article, onReadArticle }: SpotlightCardProps) {
 
           {/* CTA */}
           <div className="flex items-center gap-2 mt-auto pt-2">
-            <span className="text-sm font-sans font-bold text-white/90 group-hover:text-white transition-colors tracking-wide uppercase">
+            <span className="text-base font-sans font-bold text-white/90 group-hover:text-white transition-colors tracking-wide uppercase">
               Leer Ahora
             </span>
             <ArrowRight size={16} className="text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all" />
