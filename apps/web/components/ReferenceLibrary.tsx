@@ -149,14 +149,19 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
       <div className="bg-white/80 backdrop-blur-md border-b-2 border-b-transparent sticky top-0 z-10" style={{ borderImage: "linear-gradient(to right, #e6007e, #2d9fec, #00bdd0, #00d891) 1" }}>
         <div className="max-w-6xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <BookOpen className="w-7 h-7 text-[#00bdd0]" />
-              <h1 className="text-3xl font-serif text-textMain">Reference Library</h1>
-              {pinnedCount > 0 && (
-                <span className="px-2.5 py-1 rounded-full bg-[#fcd53a]/20 text-[#c9a800] text-sm font-medium">
-                  {pinnedCount} pinned
-                </span>
-              )}
+            <div>
+              <div className="flex items-center gap-3">
+                <BookOpen className="w-7 h-7 text-[#00bdd0]" />
+                <h1 className="text-3xl font-serif text-textMain">Reference Library</h1>
+                {pinnedCount > 0 && (
+                  <span className="px-2.5 py-1 rounded-full bg-[#fcd53a]/20 text-[#c9a800] text-sm font-medium">
+                    {pinnedCount} pinned
+                  </span>
+                )}
+              </div>
+              <p className="text-textSoft text-base mt-1 ml-10">
+                Save songs, articles, and cultural references to discuss with your tutor. Pinned items are shared with your tutor during sessions.
+              </p>
             </div>
             <button
               onClick={() => setShowAddDialog(true)}
@@ -335,116 +340,133 @@ export function ReferenceLibrary({ userId }: ReferenceLibraryProps) {
         )}
       </div>
 
-      {/* Detail Panel */}
+      {/* Detail Panel Overlay */}
       {selectedReference && (
-        <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white border-l border-black/10 shadow-2xl z-20 overflow-y-auto">
-          <div className="p-6">
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-2xl font-semibold text-textMain">{selectedReference.title}</h2>
-                  {selectedReference.isPinned && (
-                    <Pin className="w-4 h-4 text-[#fcd53a]" />
-                  )}
+        <>
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-20"
+            onClick={() => setSelectedReference(null)}
+          />
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="fixed inset-y-0 right-0 w-full max-w-xl bg-white border-l border-black/10 shadow-2xl z-30 overflow-y-auto"
+          >
+            <div className="p-8">
+              {/* Header with colored accent */}
+              <div
+                className={`-mx-8 -mt-8 px-8 pt-8 pb-6 mb-6 ${
+                  TYPE_CONFIG[selectedReference.referenceType]?.cardBg || TYPE_CONFIG.OTHER.cardBg
+                } border-b border-black/5`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className={`text-sm px-3 py-1 rounded-lg border font-medium ${
+                          TYPE_CONFIG[selectedReference.referenceType]?.color || TYPE_CONFIG.OTHER.color
+                        }`}
+                      >
+                        {TYPE_CONFIG[selectedReference.referenceType]?.label || "Other"}
+                      </span>
+                      {selectedReference.isPinned && (
+                        <span className="flex items-center gap-1 text-sm text-[#c9a800] bg-[#fcd53a]/15 px-2.5 py-1 rounded-lg">
+                          <Pin className="w-3.5 h-3.5" />
+                          Pinned
+                        </span>
+                      )}
+                    </div>
+                    <h2 className="text-3xl font-serif text-textMain leading-tight">{selectedReference.title}</h2>
+                    {selectedReference.source && (
+                      <p className="text-lg text-textSoft mt-1">{selectedReference.source}</p>
+                    )}
+                    <p className="text-sm text-textSoft mt-2">
+                      Added {new Date(selectedReference.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedReference(null)}
+                    className="p-2 rounded-xl hover:bg-black/5 text-textSoft hover:text-textMain transition-colors text-2xl leading-none"
+                  >
+                    &times;
+                  </button>
                 </div>
-                {selectedReference.source && (
-                  <p className="text-base text-textSoft">{selectedReference.source}</p>
+              </div>
+
+              <div className="space-y-5">
+                {selectedReference.url && (
+                  <a
+                    href={selectedReference.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-[#2d9fec] hover:text-[#2d9fec]/80 transition-colors text-base"
+                  >
+                    <ExternalLink className="w-5 h-5 flex-shrink-0" />
+                    <span className="underline truncate">{selectedReference.url}</span>
+                  </a>
+                )}
+
+                {selectedReference.contentText && (
+                  <div className="bg-plaster/50 rounded-2xl p-6">
+                    <h4 className="text-sm font-bold text-textSoft uppercase tracking-widest mb-3">
+                      Content
+                    </h4>
+                    <p className="text-textMain text-base leading-relaxed whitespace-pre-wrap">
+                      {selectedReference.contentText}
+                    </p>
+                  </div>
+                )}
+
+                {selectedReference.detectedContext && (
+                  <div className="bg-plaster/50 rounded-2xl p-6">
+                    <h4 className="text-sm font-bold text-textSoft uppercase tracking-widest mb-3">
+                      Context
+                    </h4>
+                    <p className="text-textSoft text-base leading-relaxed">
+                      {selectedReference.detectedContext}
+                    </p>
+                  </div>
+                )}
+
+                {selectedReference.notes && (
+                  <div className="bg-plaster/50 rounded-2xl p-6">
+                    <h4 className="text-sm font-bold text-textSoft uppercase tracking-widest mb-3">
+                      Notes
+                    </h4>
+                    <p className="text-textMain text-base leading-relaxed">{selectedReference.notes}</p>
+                  </div>
                 )}
               </div>
-              <button
-                onClick={() => setSelectedReference(null)}
-                className="p-2 rounded-lg hover:bg-black/5 text-textSoft hover:text-textMain transition-colors"
-              >
-                <span className="sr-only">Close</span>
-                &times;
-              </button>
-            </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-base px-2.5 py-1 rounded-lg border ${
-                    TYPE_CONFIG[selectedReference.referenceType]?.color || TYPE_CONFIG.OTHER.color
-                  }`}
+              <div className="flex items-center gap-3 mt-8 pt-6 border-t border-black/10">
+                {selectedReference.isPinned ? (
+                  <button
+                    onClick={() => handleUnpin(selectedReference)}
+                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#fcd53a]/15 text-[#c9a800] hover:bg-[#fcd53a]/25 transition-colors font-semibold text-base"
+                  >
+                    <PinOff className="w-5 h-5" />
+                    Unpin from Sessions
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handlePin(selectedReference)}
+                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-pink text-white hover:bg-pink/90 transition-colors font-semibold text-base"
+                  >
+                    <Pin className="w-5 h-5" />
+                    Pin for Tutor Sessions
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDelete(selectedReference)}
+                  className="px-5 py-3 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
                 >
-                  {TYPE_CONFIG[selectedReference.referenceType]?.label || "Other"}
-                </span>
-                <span className="text-base text-textSoft">
-                  Added {new Date(selectedReference.createdAt).toLocaleDateString()}
-                </span>
+                  <Trash2 className="w-5 h-5" />
+                </button>
               </div>
-
-              {selectedReference.url && (
-                <a
-                  href={selectedReference.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-[#2d9fec] hover:text-[#2d9fec]/80 transition-colors"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="text-base underline">{selectedReference.url}</span>
-                </a>
-              )}
-
-              {selectedReference.contentText && (
-                <div className="bg-plaster/50 rounded-xl p-4">
-                  <h4 className="text-base font-medium text-textSoft uppercase tracking-wider mb-2">
-                    Content
-                  </h4>
-                  <p className="text-textMain whitespace-pre-wrap">
-                    {selectedReference.contentText}
-                  </p>
-                </div>
-              )}
-
-              {selectedReference.detectedContext && (
-                <div className="bg-plaster/50 rounded-xl p-4">
-                  <h4 className="text-base font-medium text-textSoft uppercase tracking-wider mb-2">
-                    Context
-                  </h4>
-                  <p className="text-textSoft text-base">
-                    {selectedReference.detectedContext}
-                  </p>
-                </div>
-              )}
-
-              {selectedReference.notes && (
-                <div className="bg-plaster/50 rounded-xl p-4">
-                  <h4 className="text-base font-medium text-textSoft uppercase tracking-wider mb-2">
-                    Notes
-                  </h4>
-                  <p className="text-textMain text-base">{selectedReference.notes}</p>
-                </div>
-              )}
             </div>
-
-            <div className="flex items-center gap-2 mt-6 pt-6 border-t border-black/10">
-              {selectedReference.isPinned ? (
-                <button
-                  onClick={() => handleUnpin(selectedReference)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#fcd53a]/15 text-[#c9a800] hover:bg-[#fcd53a]/25 transition-colors font-medium"
-                >
-                  <PinOff className="w-4 h-4" />
-                  Unpin
-                </button>
-              ) : (
-                <button
-                  onClick={() => handlePin(selectedReference)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-plaster text-textMain hover:bg-plaster/80 transition-colors font-medium"
-                >
-                  <Pin className="w-4 h-4" />
-                  Pin to Library
-                </button>
-              )}
-              <button
-                onClick={() => handleDelete(selectedReference)}
-                className="px-4 py-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
+          </motion.div>
+        </>
       )}
 
       <PasteReferenceDialog
