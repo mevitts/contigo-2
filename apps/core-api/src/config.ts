@@ -10,7 +10,10 @@ const EnvSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().url().optional(),
-  FORCE_DEMO_AUTH: z.enum(['true', 'false']).transform(val => val === 'true').default('false' as any),
+  FORCE_DEMO_AUTH: z.preprocess(
+    (val) => val === 'true',
+    z.boolean().default(false),
+  ),
 
   // Database
   VULTR_DB_CONNECTION_STRING: z.string().min(1, 'Database connection string is required'),

@@ -23,13 +23,15 @@ async def _preload_translation_model():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if VOICE_SERVICE_MODE == "full":
-        # Docker mode: full service with DB, routes, no local model
+        # Docker mode: full service with DB, routes, and translation model
         logger.info("Starting Contigo Voice Service (full mode - Docker)...")
         from services.db_service import create_db_and_tables
         try:
             create_db_and_tables()
         except Exception as exc:
             logger.error("Error creating database tables", extra={"error": str(exc)})
+        # Preload translation model in background to avoid first-request delay
+        asyncio.create_task(_preload_translation_model())
         logger.info("Voice service ready for WebSocket connections")
     else:
         # Local mode: translation model only

@@ -42,10 +42,11 @@ voice.get('/websocket-url', async (c) => {
   }
 
   const { sessionId } = validated.data;
-  // Always use the authenticated userId from the JWT token (set by authMiddleware),
-  // NOT the query param, to prevent userId mismatches between session creation
-  // and later API calls (e.g. summary proxy uses auth token userId).
-  const userId = c.get('userId') || validated.data.userId;
+  // Prefer the query param userId when provided (frontend passes the correct logged-in user).
+  // Fall back to authenticated userId from JWT only if query param is missing.
+  // This prevents mismatch when session was created with real user but FORCE_DEMO_AUTH
+  // injects demo user into auth context.
+  const userId = validated.data.userId || c.get('userId');
   let difficulty = validated.data.difficulty || null;
   let adaptiveFlag = parseAdaptiveFlag(validated.data.adaptive || null);
   let metadata: { difficulty: string | null; adaptive: boolean | null; } | null = null;

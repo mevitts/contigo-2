@@ -363,7 +363,8 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
   }, [helpTranslation]);
 
   React.useEffect(() => {
-    if (!showTranscript || !hadTranslationRef.current) {
+    // Only auto-fetch translation if user has explicitly shown it AND transcript is visible
+    if (!showTranscript || !hadTranslationRef.current || !helpTranslation) {
       return;
     }
 
@@ -377,10 +378,11 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
     }
 
     // Skip if we already translated this exact text
-    if (lastTranslatedTextRef.current === normalized && helpTranslation) {
+    if (lastTranslatedTextRef.current === normalized) {
       return;
     }
 
+    // Only re-fetch if translation is currently visible
     fetchHelpTranslation(normalized, { force: true });
   }, [showTranscript, lastTutorText, fetchHelpTranslation, helpTranslation]);
 
@@ -932,9 +934,13 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
                 type="button"
                 onClick={() => {
                   if (helpTranslation) {
+                    // Clear translation and mark as hidden
                     setHelpTranslation(null);
                     lastTranslatedTextRef.current = "";
+                    hadTranslationRef.current = false;
                   } else {
+                    // Show translation
+                    hadTranslationRef.current = true;
                     fetchHelpTranslation(lastTutorText, { force: true });
                   }
                 }}

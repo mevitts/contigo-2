@@ -146,7 +146,7 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
   const badgeClass = SUMMARY_BADGES[badgeKey];
   const moodMessage = summaryData?.summary
     ? "Ready to file in your notebook."
-    : statusMessage || (loading ? "We’re distilling your takeaways." : "Keep practicing while we wrap these notes.");
+    : statusMessage || (loading ? "Please wait — we're analyzing your session and generating your personalized summary. This may take a moment." : "Keep practicing while we wrap these notes.");
   const localizedVariant = summaryData?.localizedSummary;
   const localizedSummaryText = localizedVariant?.text?.trim();
   const displaySummary = localizedSummaryText || summaryData?.summary || moodMessage;
