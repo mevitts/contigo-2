@@ -1,4 +1,5 @@
 import { query } from '../db/db_service.js';
+import * as jose from 'jose';
 
 const DEFAULT_FRONTEND_URL = 'http://localhost:5173';
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -168,4 +169,22 @@ export async function upsertUser(
   );
 
   return opts.externalUserId;
+}
+
+/**
+ * Generates an HS256 JWT for authenticating a user to the API.
+ */
+export async function generateAuthToken(
+  secret: string,
+  userId: string,
+  email?: string | null
+): Promise<string> {
+  const key = new TextEncoder().encode(secret);
+  const builder = new jose.SignJWT({ email: email || undefined })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setSubject(userId)
+    .setIssuer('urn:contigo:core-api')
+    .setExpirationTime('7d');
+  return builder.sign(key);
 }

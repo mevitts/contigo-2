@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { DEMO_MODE_ENABLED, hasGoogleConfig, sanitizeRedirectTarget, buildRedirectUrl, wantsJsonResponse, exchangeCodeForGoogleTokens, fetchGoogleUserProfile, upsertUser } from '../services/auth_service.js';
+import { DEMO_MODE_ENABLED, hasGoogleConfig, sanitizeRedirectTarget, buildRedirectUrl, wantsJsonResponse, exchangeCodeForGoogleTokens, fetchGoogleUserProfile, upsertUser, generateAuthToken } from '../services/auth_service.js';
 import type { AppEnv, DbEnv } from '../services/auth_service.js';
 import { DEMO_USER } from '../constants.js';
 import type { Config } from '../config.js';
@@ -7,6 +7,10 @@ import type { Config } from '../config.js';
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 
 type AuthEnv = { Bindings: DbEnv; Variables: { config: Config } };
+
+function getJwtSecret(config: Config, env: DbEnv): string | undefined {
+  return config.JWT_SECRET || env.VOICE_ENGINE_SECRET || undefined;
+}
 
 const auth = new Hono<AuthEnv>();
 
@@ -72,14 +76,22 @@ auth.get('/login', async (c) => {
       console.warn('Failed to persist demo user record:', err);
     }
 
+    const userId = databaseUserId || demoUser.id;
+    let token: string | undefined;
+    const secret = getJwtSecret(c.var.config, c.env);
+    if (secret) {
+      token = await generateAuthToken(secret, userId, demoUser.email);
+    }
+
     const destination = buildRedirectUrl(redirectTarget, {
       auth: 'success',
       demo_mode: '1',
-      user_id: databaseUserId || demoUser.id,
+      user_id: userId,
       email: demoUser.email,
       first_name: demoUser.first_name,
       last_name: demoUser.last_name,
-      provider
+      provider,
+      token,
     });
 
     return c.redirect(destination, 302);
@@ -154,11 +166,19 @@ auth.get('/callback', async (c) => {
       console.warn('Failed to persist demo user to DB:', err);
     }
 
+    const resolvedUserId = userId || user.id;
+    let token: string | undefined;
+    const secret = getJwtSecret(c.var.config, c.env);
+    if (secret) {
+      token = await generateAuthToken(secret, resolvedUserId, user.email);
+    }
+
     const payload = {
       demo_mode: true,
       message: 'Using demo authentication - Google OAuth not configured',
       user,
-      user_id: userId || user.id
+      user_id: resolvedUserId,
+      token,
     };
 
     if (wantsJson) {
@@ -168,11 +188,12 @@ auth.get('/callback', async (c) => {
     const destination = buildRedirectUrl(redirectTarget, {
       auth: 'success',
       demo_mode: '1',
-      user_id: payload.user_id,
+      user_id: resolvedUserId,
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
-      provider: user.provider
+      provider: user.provider,
+      token,
     });
     return c.redirect(destination, 302);
   }
@@ -212,6 +233,13 @@ auth.get('/callback', async (c) => {
       console.warn('Failed to persist authenticated user to DB:', err);
     }
 
+    const resolvedUserId = userId || profile.sub;
+    let token: string | undefined;
+    const secret = getJwtSecret(c.var.config, c.env);
+    if (secret) {
+      token = await generateAuthToken(secret, resolvedUserId, profile.email);
+    }
+
     const payload = {
       demo_mode: false,
       user: {
@@ -222,7 +250,8 @@ auth.get('/callback', async (c) => {
         email_verified: profile.email_verified,
         profile_picture_url: profile.picture,
       },
-      user_id: userId || profile.sub
+      user_id: resolvedUserId,
+      token,
     };
 
     if (wantsJson) {
@@ -231,12 +260,13 @@ auth.get('/callback', async (c) => {
 
     const destination = buildRedirectUrl(redirectTarget, {
       auth: 'success',
-      demo_mode: payload.demo_mode ? '1' : '0',
-      user_id: payload.user_id,
+      demo_mode: '0',
+      user_id: resolvedUserId,
       email: profile.email || undefined,
       first_name: profile.given_name || undefined,
       last_name: profile.family_name || undefined,
-      provider: 'google'
+      provider: 'google',
+      token,
     });
 
     return c.redirect(destination, 302);

@@ -1,24 +1,25 @@
 import { useState, useRef } from "react";
-import { Mic, Globe, Book, Info } from "lucide-react";
-import type { SessionRecord } from "../lib/types";
+import { Mic, Globe, Book, BookOpen, Info } from "lucide-react";
+import type { SessionRecord, WeeklyArticle } from "../lib/types";
+import { SpotlightCard } from "./SpotlightCard";
 
 const GREETINGS = [
   { text: "Buenos días", origin: "Universal Spanish", flags: "\u{1F30E}", note: "The standard morning greeting used across all Spanish-speaking countries." },
-  { text: "¿Qué onda?", origin: "Mexico", flags: "\u{1F1F2}\u{1F1FD}", note: "Casual slang meaning 'What's up?' — from 'onda' (wave/vibe). Ubiquitous among young Mexicans." },
-  { text: "¿Qué tal?", origin: "Spain & Latin America", flags: "\u{1F1EA}\u{1F1F8} \u{1F30E}", note: "A universal informal greeting, short for '¿Qué tal estás?' — works anywhere Spanish is spoken." },
+  { text: "¿Qué onda?", origin: "Mexico", flags: "\u{1F32E}", note: "Casual slang meaning 'What's up?' — from 'onda' (wave/vibe). Ubiquitous among young Mexicans." },
+  { text: "¿Qué tal?", origin: "Spain & Latin America", flags: "\u{2600}\u{FE0F}", note: "A universal informal greeting, short for '¿Qué tal estás?' — works anywhere Spanish is spoken." },
   { text: "¡Buenas!", origin: "Universal Informal", flags: "\u{1F30E}", note: "A friendly shortening of 'buenos días/tardes/noches' — works any time of day." },
-  { text: "¿Cómo andás?", origin: "Argentina & Uruguay", flags: "\u{1F1E6}\u{1F1F7} \u{1F1FA}\u{1F1FE}", note: "Rioplatense Spanish using 'vos' conjugation instead of 'tú'. Literally 'How are you walking?'" },
-  { text: "¡Epa!", origin: "Venezuela", flags: "\u{1F1FB}\u{1F1EA}", note: "A quick, upbeat greeting or exclamation of surprise — pure Venezuelan energy." },
-  { text: "¿Qué hubo?", origin: "Colombia", flags: "\u{1F1E8}\u{1F1F4}", note: "Pronounced 'quiubo' — a warm, casual 'What's been going on?' heard on the streets of Bogotá and Medellín." },
-  { text: "¿Qué hay de nuevo?", origin: "Caribbean Spanish", flags: "\u{1F1E8}\u{1F1FA} \u{1F1E9}\u{1F1F4} \u{1F1F5}\u{1F1F7}", note: "Literally 'What's new?' — a breezy conversation opener popular in Cuba, Dominican Republic, and Puerto Rico." },
-  { text: "¡Hola, che!", origin: "Argentina", flags: "\u{1F1E6}\u{1F1F7}", note: "'Che' is the iconic Argentine interjection — a term of familiarity, like 'hey, buddy.'" },
-  { text: "¿Cómo vas?", origin: "Central America", flags: "\u{1F1EC}\u{1F1F9} \u{1F1F8}\u{1F1FB} \u{1F1ED}\u{1F1F3}", note: "A casual 'How's it going?' widely used in Guatemala, El Salvador, and Honduras." },
-  { text: "¿Qué más?", origin: "Colombia & Ecuador", flags: "\u{1F1E8}\u{1F1F4} \u{1F1EA}\u{1F1E8}", note: "Short for '¿Qué más hay?' — a laid-back 'What else is going on?' among friends." },
-  { text: "¡Quiúbole!", origin: "Mexico", flags: "\u{1F1F2}\u{1F1FD}", note: "A playful contraction of '¿Qué hubo le?' — very informal, mostly between close friends." },
+  { text: "¿Cómo andás?", origin: "Argentina & Uruguay", flags: "\u{1F9C9}", note: "Rioplatense Spanish using 'vos' conjugation instead of 'tú'. Literally 'How are you walking?'" },
+  { text: "¡Epa!", origin: "Venezuela", flags: "\u{1F33A}", note: "A quick, upbeat greeting or exclamation of surprise — pure Venezuelan energy." },
+  { text: "¿Qué hubo?", origin: "Colombia", flags: "\u{2615}", note: "Pronounced 'quiubo' — a warm, casual 'What's been going on?' heard on the streets of Bogotá and Medellín." },
+  { text: "¿Qué hay de nuevo?", origin: "Caribbean Spanish", flags: "\u{1F334}", note: "Literally 'What's new?' — a breezy conversation opener popular in Cuba, Dominican Republic, and Puerto Rico." },
+  { text: "¡Hola, che!", origin: "Argentina", flags: "\u{1F9C9}", note: "'Che' is the iconic Argentine interjection — a term of familiarity, like 'hey, buddy.'" },
+  { text: "¿Cómo vas?", origin: "Central America", flags: "\u{1F30B}", note: "A casual 'How's it going?' widely used in Guatemala, El Salvador, and Honduras." },
+  { text: "¿Qué más?", origin: "Colombia & Ecuador", flags: "\u{2615}", note: "Short for '¿Qué más hay?' — a laid-back 'What else is going on?' among friends." },
+  { text: "¡Quiúbole!", origin: "Mexico", flags: "\u{1F32E}", note: "A playful contraction of '¿Qué hubo le?' — very informal, mostly between close friends." },
   { text: "¿Cómo te va?", origin: "Universal", flags: "\u{1F30E}", note: "Literally 'How's it going for you?' — polite and warm, works in any context." },
-  { text: "¡Hola, pana!", origin: "Venezuela & Ecuador", flags: "\u{1F1FB}\u{1F1EA} \u{1F1EA}\u{1F1E8}", note: "'Pana' means buddy/pal — from 'panadero' (baker), old slang for a trusted companion." },
-  { text: "¿Todo bien?", origin: "Spain & Southern Cone", flags: "\u{1F1EA}\u{1F1F8} \u{1F1E6}\u{1F1F7} \u{1F1E8}\u{1F1F1}", note: "A casual check-in — 'Everything good?' Used like the English 'All right?'" },
-  { text: "¡Pura vida!", origin: "Costa Rica", flags: "\u{1F1E8}\u{1F1F7}", note: "Literally 'pure life' — Costa Rica's national motto, used as hello, goodbye, thanks, and everything in between." },
+  { text: "¡Hola, pana!", origin: "Venezuela & Ecuador", flags: "\u{1F33A}", note: "'Pana' means buddy/pal — from 'panadero' (baker), old slang for a trusted companion." },
+  { text: "¿Todo bien?", origin: "Spain & Southern Cone", flags: "\u{2600}\u{FE0F}", note: "A casual check-in — 'Everything good?' Used like the English 'All right?'" },
+  { text: "¡Pura vida!", origin: "Costa Rica", flags: "\u{1F98B}", note: "Literally 'pure life' — Costa Rica's national motto, used as hello, goodbye, thanks, and everything in between." },
 ] as const;
 
 interface DashboardProps {
@@ -26,8 +27,11 @@ interface DashboardProps {
   onStartSession: () => void;
   onGoToSettings: () => void;
   onGoToNotebook: () => void;
+  onGoToLibrary?: () => void;
   sessions: SessionRecord[];
   isLoading?: boolean;
+  spotlightArticle?: WeeklyArticle | null;
+  onReadArticle?: (article: WeeklyArticle) => void;
 }
 
 const NoiseOverlay = () => (
@@ -39,7 +43,7 @@ const NoiseOverlay = () => (
   />
 );
 
-export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNotebook, isLoading = false }: DashboardProps) {
+export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNotebook, onGoToLibrary, isLoading = false, spotlightArticle, onReadArticle }: DashboardProps) {
   const [greetingIndex] = useState(() => Math.floor(Math.random() * GREETINGS.length));
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipTimeout = useRef<ReturnType<typeof setTimeout>>();
@@ -53,7 +57,6 @@ export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNote
   const handleTooltipLeave = () => {
     tooltipTimeout.current = setTimeout(() => setShowTooltip(false), 150);
   };
-
   return (
     <div className="min-h-screen bg-plaster font-serif animate-fade-in flex flex-col relative overflow-hidden">
       <NoiseOverlay />
@@ -69,15 +72,15 @@ export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNote
       {/* Header */}
       <div className="absolute top-8 left-8 z-20 opacity-60">
           <div className="flex items-center gap-2">
-              <Globe size={12} className="text-white" />
-              <span className="text-[10px] md:text-xs font-sans font-black tracking-[0.2em] uppercase text-white">Contigo</span>
+              <Globe size={20} className="text-white" />
+              <span className="text-sm md:text-base font-sans font-black tracking-[0.2em] uppercase text-white">Contigo</span>
           </div>
       </div>
 
       <div className="absolute top-8 right-8 z-20">
-        <div 
+        <div
             onClick={onGoToSettings}
-            className="relative w-12 h-12 md:w-14 md:h-14 rounded-full border-[3px] border-yellow shadow-lg overflow-hidden cursor-pointer hover:scale-105 transition-all"
+            className="relative w-16 h-16 md:w-20 md:h-20 rounded-full border-[3px] border-yellow shadow-lg overflow-hidden cursor-pointer hover:scale-105 transition-all"
           >
             <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80" className="w-full h-full object-cover" alt="Profile" />
         </div>
@@ -91,7 +94,7 @@ export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNote
              <div className="flex items-center gap-2">
                <span
                  key={greetingIndex}
-                 className="text-2xl md:text-3xl lg:text-4xl font-sans font-bold text-white/90 leading-tight animate-fade-in"
+                 className="text-3xl md:text-4xl lg:text-5xl font-sans font-bold text-white/90 leading-tight animate-fade-in"
                >
                  {greeting.text},
                </span>
@@ -101,19 +104,19 @@ export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNote
                  onMouseLeave={handleTooltipLeave}
                  onTouchStart={() => setShowTooltip((v) => !v)}
                >
-                 <Info size={14} className="text-white/40 hover:text-white/80 transition-colors cursor-help mt-1" />
+                 <Info size={18} className="text-white/60 hover:text-white/90 transition-colors cursor-help mt-1" />
                  {showTooltip && (
                    <div className="absolute left-full bottom-0 ml-3 w-80 bg-white rounded-2xl shadow-2xl border border-black/10 p-5 z-50 text-left">
                      <div className="flex items-center gap-2.5 mb-2">
                        <span className="text-xl leading-none">{greeting.flags}</span>
-                       <p className="text-xs font-sans font-bold uppercase tracking-[0.2em] text-pink">{greeting.origin}</p>
+                       <p className="text-sm font-sans font-bold uppercase tracking-[0.2em] text-pink">{greeting.origin}</p>
                      </div>
-                     <p className="text-sm font-sans text-textMain leading-relaxed">{greeting.note}</p>
+                     <p className="text-base font-sans text-textMain leading-relaxed">{greeting.note}</p>
                      <a
                        href="https://blog.worldsacross.com/index/regional-vocabulary-words-from-different-spanish-speaking-countries"
                        target="_blank"
                        rel="noopener noreferrer"
-                       className="inline-block mt-3 text-[11px] font-sans font-semibold text-sky/70 hover:text-pink transition-colors"
+                       className="inline-block mt-3 text-xs font-sans font-semibold text-sky/70 hover:text-pink transition-colors"
                      >
                        Explore regional expressions &rarr;
                      </a>
@@ -131,7 +134,7 @@ export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNote
            >
               <div className="absolute top-0 right-0 w-32 h-32 bg-black opacity-[0.1] rotate-45 translate-x-12 -translate-y-10 pointer-events-none" />
               
-              <span className="relative z-10 font-sans font-bold text-sm md:text-base tracking-widest uppercase">
+              <span className="relative z-10 font-sans font-bold text-base md:text-lg tracking-widest uppercase">
                 {isLoading ? "Loading..." : "Begin Chat"}
               </span>
               <div className="relative z-10 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/30 transition-colors">
@@ -141,15 +144,35 @@ export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNote
         </div>
       </div>
 
+      {/* Weekly Spotlight */}
+      {spotlightArticle && onReadArticle && (
+        <div className="px-8 md:px-16 lg:px-24 z-10 relative mt-4 md:mt-0">
+          <div className="max-w-2xl">
+            <SpotlightCard article={spotlightArticle} onReadArticle={onReadArticle} />
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="pb-12 px-8 md:px-16 lg:px-24 z-20 mt-auto">
-         <button 
-           onClick={onGoToNotebook}
-           className="w-full md:w-auto flex items-center justify-center gap-2 text-textSoft hover:text-pink transition-colors py-4 font-sans text-xs font-bold uppercase tracking-widest opacity-90 hover:opacity-100"
-         >
-            <Book size={16} />
-            <span>Open Notebook</span>
-         </button>
+         <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+           <button
+             onClick={onGoToNotebook}
+             className="w-full md:w-auto flex items-center justify-center gap-3 text-textMain hover:text-pink transition-colors py-4 font-sans text-base font-bold uppercase tracking-widest"
+           >
+              <Book size={22} />
+              <span>Open Notebook</span>
+           </button>
+           {onGoToLibrary && (
+             <button
+               onClick={onGoToLibrary}
+               className="w-full md:w-auto flex items-center justify-center gap-3 text-textMain hover:text-emerald-500 transition-colors py-4 font-sans text-base font-bold uppercase tracking-widest"
+             >
+                <BookOpen size={20} />
+                <span>Reference Library</span>
+             </button>
+           )}
+         </div>
       </div>
     </div>
   );

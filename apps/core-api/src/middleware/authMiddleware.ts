@@ -1,7 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import * as jose from 'jose';
 import type { Config } from '../config.js';
-import { DEMO_USER, MOCK_USER } from '../constants.js';
+import { DEMO_USER } from '../constants.js';
 
 export interface AuthContext {
   userId: string;
@@ -29,22 +29,13 @@ const authMiddleware = createMiddleware<MiddlewareEnv>(async (c, next) => {
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
+    const secret = config?.JWT_SECRET || (c.env as any)?.VOICE_ENGINE_SECRET;
 
-    // Mock token validation - only in demo mode
-    if (config?.FORCE_DEMO_AUTH && token === MOCK_USER.TOKEN) {
-      c.set('userId', MOCK_USER.ID);
-      await next();
-      return;
-    }
-
-    // Production JWT validation using VOICE_ENGINE_SECRET (shared HMAC secret)
-    const secret = config?.VOICE_ENGINE_SECRET;
     if (secret) {
       try {
-        const secretKey = new TextEncoder().encode(secret);
-        const { payload } = await jose.jwtVerify(token, secretKey, {
+        const key = new TextEncoder().encode(secret);
+        const { payload } = await jose.jwtVerify(token, key, {
           issuer: 'urn:contigo:core-api',
-          audience: 'urn:contigo:voice-engine',
         });
 
         if (payload.sub) {
@@ -53,7 +44,7 @@ const authMiddleware = createMiddleware<MiddlewareEnv>(async (c, next) => {
           return;
         }
       } catch (err) {
-        // Token invalid or expired — fall through to 401
+        console.warn('[authMiddleware] JWT verification failed:', err instanceof Error ? err.message : err);
       }
     }
   }

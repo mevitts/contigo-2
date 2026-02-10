@@ -1,8 +1,11 @@
 import React from "react";
-import { X, Mic, MicOff, HelpCircle, Eye, EyeOff, Loader2 } from "lucide-react";
-import { motion } from "motion/react";
+import { X, Mic, MicOff, HelpCircle, Eye, EyeOff, ClipboardPaste, Loader2, Check } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import type { SessionRecord } from "../lib/types";
-import { translateText } from "../lib/api";
+import {
+  translateText,
+  createReference,
+} from "../lib/api";
 
 interface VoiceSessionProps {
   onEndSession: (durationSeconds: number) => void;
@@ -10,6 +13,7 @@ interface VoiceSessionProps {
   websocketUrl?: string;
   onConnectionError?: (message: string) => void;
   maxDurationSeconds?: number;
+  userId?: string;
 }
 
 interface Message {
@@ -79,7 +83,7 @@ const NoiseOverlay: React.FC = () => (
   />
 );
 
-export function VoiceSession({ onEndSession, session, websocketUrl, onConnectionError, maxDurationSeconds }: VoiceSessionProps) {
+export function VoiceSession({ onEndSession, session, websocketUrl, onConnectionError, maxDurationSeconds, userId }: VoiceSessionProps) {
   const [isMuted, setIsMuted] = React.useState(false);
   const [elapsedSeconds, setElapsedSeconds] = React.useState(0);
   const [connectionStatus, setConnectionStatus] = React.useState<"idle" | "connecting" | "connected" | "error">(
@@ -100,6 +104,12 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
   const [helpError, setHelpError] = React.useState<string | null>(null);
   const [nudgeTip, setNudgeTip] = React.useState<string | null>(null);
   const nudgeTimeoutRef = React.useRef<number>();
+
+  // Paste reference state
+  const [showPasteInput, setShowPasteInput] = React.useState(false);
+  const [pastedContent, setPastedContent] = React.useState("");
+  const [pasteSaving, setPasteSaving] = React.useState(false);
+  const [pasteSaved, setPasteSaved] = React.useState(false);
 
   const wsRef = React.useRef<WebSocket | null>(null);
   const micStreamRef = React.useRef<MediaStream | null>(null);
@@ -368,6 +378,38 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
 
     fetchHelpTranslation(normalized, { force: true });
   }, [showTranscript, lastTutorText, fetchHelpTranslation, helpTranslation]);
+
+  const handleSavePastedContent = React.useCallback(async () => {
+    const trimmed = pastedContent.trim();
+    if (!trimmed || !userId) return;
+
+    setPasteSaving(true);
+    try {
+      const firstLine = trimmed.split("\n")[0].slice(0, 60);
+      const title = firstLine || "Pasted text";
+
+      await createReference({
+        userId,
+        conversationId: session.id,
+        title,
+        referenceType: "OTHER",
+        contentText: trimmed,
+        detectionMethod: "manual",
+        source: null,
+        detectedContext: null,
+      });
+
+      setPastedContent("");
+      setPasteSaved(true);
+      setTimeout(() => {
+        if (isMountedRef.current) setPasteSaved(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to save reference:", error);
+    } finally {
+      if (isMountedRef.current) setPasteSaving(false);
+    }
+  }, [pastedContent, userId, session.id]);
 
   const enqueueAudioPlayback = React.useCallback((base64: string, mime?: string) => {
     if (!base64) {
@@ -721,11 +763,11 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
             <X size={20} className="text-gray-600" />
           </button>
           <div className="flex flex-col">
-            <span className="text-xs font-bold uppercase tracking-widest text-gray-400">
+            <span className="text-sm font-bold uppercase tracking-widest text-gray-400">
               En Vivo
             </span>
-            <span className="font-serif text-xl text-textMain">{formatTimer(elapsedSeconds)}</span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-gray-400">
+            <span className="font-serif text-2xl text-textMain">{formatTimer(elapsedSeconds)}</span>
+            <span className="text-xs font-bold uppercase tracking-[0.4em] text-gray-400">
               {connectionStatus === "connected" && "Live"}
               {connectionStatus === "connecting" && "Connecting"}
               {connectionStatus === "error" && "Offline"}
@@ -734,7 +776,19 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
           </div>
         </div>
 
-        <div className="w-10" />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowPasteInput((prev) => !prev)}
+            className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+              showPasteInput
+                ? "bg-emerald-500 text-white shadow-md"
+                : "bg-white border-2 border-gray-200 text-gray-400 hover:border-emerald-400 hover:text-emerald-500"
+            }`}
+            title="Paste text"
+          >
+            <ClipboardPaste size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 relative flex items-center justify-center z-10">
@@ -795,7 +849,7 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
             <motion.p
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-xl md:text-2xl font-sans italic text-sky-600 leading-relaxed pt-2"
+              className="text-2xl md:text-3xl font-sans italic text-sky-600 leading-relaxed pt-2"
             >
               {helpTranslation}
             </motion.p>
@@ -812,14 +866,14 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
             onClick={() => setShowTranscript((prev) => !prev)}
           >
             <p
-              className={`text-2xl md:text-3xl font-serif text-textMain transition-all duration-300 ${
+              className={`text-3xl md:text-4xl font-serif text-textMain transition-all duration-300 ${
                 showTranscript ? "opacity-100 blur-none" : "opacity-20 blur-md"
               }`}
             >
               &ldquo;{lastMessage?.text}&rdquo;
             </p>
 
-            <div className="mt-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
+            <div className="mt-4 flex items-center justify-center gap-2 text-sm font-bold uppercase tracking-widest text-gray-400">
               {showTranscript ? <Eye size={14} /> : <EyeOff size={14} />}
               <span>{showTranscript ? "Hide captions" : "Show captions"}</span>
             </div>
@@ -839,7 +893,7 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
                   }
                 }}
                 disabled={helpLoading}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold uppercase tracking-widest bg-sky-50 border-2 border-sky-200 text-sky-600 hover:bg-sky-100 hover:border-sky-400 transition-colors disabled:opacity-50 shadow-sm"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-base font-bold uppercase tracking-widest bg-sky-50 border-2 border-sky-200 text-sky-600 hover:bg-sky-100 hover:border-sky-400 transition-colors disabled:opacity-50 shadow-sm"
               >
                 {helpLoading ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -863,6 +917,53 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
           </button>
         </div>
       </div>
+
+      {/* Paste Text Panel */}
+      <AnimatePresence>
+        {showPasteInput && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 shadow-lg px-6 py-4 max-w-2xl mx-auto rounded-t-2xl"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-bold uppercase tracking-widest text-gray-400">
+                Paste Text
+              </span>
+              <button
+                onClick={() => setShowPasteInput(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+              >
+                <X size={16} className="text-gray-500" />
+              </button>
+            </div>
+            <textarea
+              value={pastedContent}
+              onChange={(e) => setPastedContent(e.target.value)}
+              placeholder="Paste lyrics, a story, article text, or anything you want to discuss..."
+              className="w-full h-28 p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm text-textMain resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-300"
+            />
+            <div className="flex items-center justify-end gap-3 mt-3">
+              {pasteSaved && (
+                <span className="flex items-center gap-1 text-sm text-emerald-600 font-medium">
+                  <Check size={14} /> Saved
+                </span>
+              )}
+              <button
+                onClick={handleSavePastedContent}
+                disabled={!pastedContent.trim() || pasteSaving}
+                className="px-5 py-2 rounded-full bg-emerald-500 text-white text-sm font-bold uppercase tracking-widest hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                {pasteSaving ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : null}
+                Save
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

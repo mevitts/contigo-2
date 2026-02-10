@@ -159,7 +159,7 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: "easeOut" }}
-        className="mx-auto w-full max-w-4xl rounded-3xl bg-white shadow-[0_35px_120px_rgba(0,0,0,0.08)] border border-black/5"
+        className="mx-auto w-full max-w-5xl rounded-3xl bg-white shadow-[0_35px_120px_rgba(0,0,0,0.08)] border border-black/5"
       >
         <div className="border-b border-black/5 px-6 py-6 md:px-10 relative">
           <button
@@ -172,24 +172,24 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
           </button>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pr-10">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-500">Session recap</p>
-              <h1 className="text-3xl font-serif text-textMain">{displayTopic}</h1>
-              <p className="text-sm font-semibold text-gray-600">Session length · {formattedDuration}</p>
+              <p className="text-sm font-bold uppercase tracking-[0.35em] text-gray-500">Session recap</p>
+              <h1 className="text-4xl font-serif text-textMain">{displayTopic}</h1>
+              <p className="text-base font-semibold text-gray-600">Session length · {formattedDuration}</p>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
-              <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.3em] ${badgeClass}`}>
+              <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold uppercase tracking-[0.3em] ${badgeClass}`}>
                 {badgeKey === "ready" && "Ready"}
                 {badgeKey === "generating" && "Drafting"}
                 {badgeKey === "pending" && "Pending"}
               </span>
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-600 border border-dashed border-gray-300 rounded-full px-3 py-1">
+              <span className="text-sm font-semibold uppercase tracking-[0.3em] text-gray-600 border border-dashed border-gray-300 rounded-full px-3 py-1">
                 {sessionDateLabel}
               </span>
               <button
                 type="button"
                 onClick={handleRefresh}
                 disabled={loading}
-                className="inline-flex items-center gap-1 rounded-full border border-black/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.3em] text-textMain hover:bg-black/5 transition-colors disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-full border border-black/10 px-3 py-1 text-sm font-bold uppercase tracking-[0.3em] text-textMain hover:bg-black/5 transition-colors disabled:opacity-40"
               >
                 <RefreshCw size={14} />
                 Refresh
@@ -203,23 +203,23 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
             <div className="space-y-5">
               <section className={`rounded-2xl border border-black/5 p-6 ${summaryBackdropClass}`}>
                 <div className="flex items-center justify-between gap-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-500">Summary</p>
+                  <p className="text-sm font-bold uppercase tracking-[0.35em] text-gray-500">Summary</p>
                   {localizedVariant && (
-                    <span className="text-[10px] uppercase tracking-[0.35em] text-sky-600">
+                    <span className="text-xs uppercase tracking-[0.35em] text-sky-600">
                       {localizedVariant.language === "es"
                         ? "Versión en español"
                         : `Localized (${localizedVariant.language})`}
                     </span>
                   )}
                 </div>
-                <p className="mt-4 text-lg font-serif leading-relaxed text-textMain">
+                <p className="mt-4 text-xl font-serif leading-relaxed text-textMain">
                   {displaySummary}
                 </p>
                 {summaryData?.episodicSummary && (
-                  <div className="mt-6 rounded-2xl border border-sky/25 bg-sky/5 p-4 text-sm text-sky-900 flex gap-3">
+                  <div className="mt-6 rounded-2xl border border-sky/25 bg-sky/5 p-4 text-base text-sky-900 flex gap-3">
                     <BookOpen size={18} className="mt-[2px]" />
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.35em] text-sky-700 mb-1">Memory pulse</p>
+                      <p className="text-sm font-bold uppercase tracking-[0.35em] text-sky-700 mb-1">Memory pulse</p>
                       <p className="leading-relaxed">{summaryData.episodicSummary}</p>
                     </div>
                   </div>
@@ -227,15 +227,15 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
               </section>
               {spanishSnippets.length > 0 && (
                 <section className="rounded-2xl border border-amber/40 bg-[#fffaf2] p-5 shadow-[0_15px_35px_rgba(255,149,5,0.08)]">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-amber-700">
+                  <p className="text-sm font-bold uppercase tracking-[0.35em] text-amber-700">
                     Spanish phrases to reuse
                   </p>
                   <ul className="mt-4 space-y-3">
                     {spanishSnippets.map((snippet, idx) => (
                       <li key={`${snippet.spanish}-${idx}`} className="rounded-2xl border border-white/60 bg-white/70 p-3">
-                        <p className="font-serif text-lg text-textMain">{snippet.spanish}</p>
+                        <p className="font-serif text-xl text-textMain">{snippet.spanish}</p>
                         {(snippet.english || snippet.context) && (
-                          <p className="text-sm text-gray-600">
+                          <p className="text-base text-gray-600">
                             {snippet.english && <span className="italic">{snippet.english}</span>}
                             {snippet.english && snippet.context ? " · " : ""}
                             {snippet.context}
@@ -248,10 +248,10 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
               )}
               {personalConnections.length > 0 && (
                 <section className="rounded-2xl border border-emerald/40 bg-[#f0fff6] p-5 shadow-[0_15px_35px_rgba(16,185,129,0.12)]">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-emerald-700">
+                  <p className="text-sm font-bold uppercase tracking-[0.35em] text-emerald-700">
                     Personal callbacks
                   </p>
-                  <ul className="mt-3 space-y-2 text-sm text-textMain">
+                  <ul className="mt-3 space-y-2 text-base text-textMain">
                     {personalConnections.map((detail, idx) => (
                       <li key={`${detail}-${idx}`} className="flex items-start gap-2">
                         <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
@@ -268,9 +268,9 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
                 <div className="rounded-2xl border border-violet-200 bg-[#f8f5ff] p-4 shadow-[0_12px_30px_rgba(124,58,237,0.08)]">
                   <div className="flex items-center gap-2 text-violet-600">
                     <Target size={18} />
-                    <p className="text-[11px] font-bold uppercase tracking-[0.35em]">Areas to Practice</p>
+                    <p className="text-sm font-bold uppercase tracking-[0.35em]">Areas to Practice</p>
                   </div>
-                  <ul className="mt-3 space-y-2 text-sm text-textMain">
+                  <ul className="mt-3 space-y-2 text-base text-textMain">
                     {errorInsights.map((insight, idx) => (
                       <li key={`${insight}-${idx}`} className="leading-snug">
                         {insight}
@@ -288,12 +288,12 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
                   >
                     <div className="flex items-center gap-2">
                       <span className={`h-2 w-8 rounded-full ${accent.dot} opacity-80`} />
-                      <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-gray-600">
+                      <p className="text-sm font-bold uppercase tracking-[0.35em] text-gray-600">
                         {section.title}
                       </p>
                     </div>
                     {section.items.length ? (
-                      <ul className="mt-3 space-y-1.5 text-sm text-textMain">
+                      <ul className="mt-3 space-y-1.5 text-base text-textMain">
                         {section.items.map((item, itemIndex) => (
                           <li key={`${section.title}-${itemIndex}`} className="leading-snug">
                             • {item}
@@ -301,7 +301,7 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
                         ))}
                       </ul>
                     ) : (
-                      <p className="mt-3 text-sm text-gray-400">No notes just yet.</p>
+                      <p className="mt-3 text-base text-gray-400">No notes just yet.</p>
                     )}
                   </div>
                 );
@@ -312,14 +312,14 @@ export function SessionSummary({ session, durationSeconds, onBackHome, onPractic
           <div className="flex flex-col gap-3 md:flex-row">
             <button
               onClick={onBackHome}
-              className="flex-1 py-3 border-2 border-gray-200 text-gray-600 font-bold uppercase tracking-[0.35em] text-xs hover:border-gray-500 hover:text-gray-800 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-3 border-2 border-gray-200 text-gray-600 font-bold uppercase tracking-[0.35em] text-sm hover:border-gray-500 hover:text-gray-800 transition-colors flex items-center justify-center gap-2"
             >
               <Trash2 size={16} />
               Discard Session
             </button>
             <button
               onClick={onPracticeAgain}
-              className="flex-1 py-3 bg-black text-white font-bold uppercase tracking-[0.35em] text-xs shadow-[5px_5px_0px_#E6007E] hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-black text-white font-bold uppercase tracking-[0.35em] text-sm shadow-[5px_5px_0px_#E6007E] hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-2"
             >
               <Save size={16} />
               Save & Practice

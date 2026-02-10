@@ -25,6 +25,7 @@ from services.tutor_service import (
     record_early_struggle,
 )
 from services.cerebras_service import cerebras_service
+from services.gemini_service import gemini_service
 from services.db_service import engine         # <-- YOUR DB ENGINE
 from sqlmodel import Session                     # <-- YOUR DB SESSION
 
@@ -90,6 +91,7 @@ class ElevenLabsConversationHandler:
         self.model = model
         self.analysis_model = analysis_model or settings.CEREBRAS_MODEL
         self.last_agent_text = ""
+        self.last_user_text = ""
         self.user_turn_counter = 0
         self.last_user_audio_ts = time.monotonic()
         self.keepalive_task: Optional[asyncio.Task] = None
@@ -635,7 +637,11 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                     if not transcript_text:
                         logger.warning(f"Empty user transcript event. Raw keys: {list(data.keys())}, event: {json.dumps(data)[:500]}")
                     logger.info(f"User transcript: {transcript_text}")
-                    
+
+                    # --- CACHE USER TEXT FOR REFERENCE DETECTION ---
+                    self.last_user_text = transcript_text
+                    # ------------------------------------------------
+
                     # We call your tutor_service as a background task
                     if self.conversation_uuid and self.user_id and transcript_text:
                         logger.info(f"Triggering Tutor Brain for convo: {self.conversation_uuid}")
@@ -712,7 +718,11 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                         "type": "agent_response",
                         "text": agent_text
                     })
-                    
+# --- REFERENCE DETECTION ---
+                    if agent_text and settings.ENABLE_REFERENCE_DETECTION:
+                        asyncio.create_task(self._check_for_references(agent_text))
+                    # ---------------------------
+
                 elif message_type == "ping":
                     pass  # ElevenLabs keepalive - ignore silently
 
@@ -747,6 +757,39 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
         if self.conversation_uuid:
             clear_conversation_state(self.conversation_uuid)
         logger.info("ElevenLabs conversation ended")
+
+    async def _check_for_references(self, agent_text: str):
+        """
+        Check for cultural references, songs, etc. in agent response.
+        Sends detected references to frontend via WebSocket.
+        """
+        try:
+            # Use Gemini 3 as primary (hackathon alignment)
+            if settings.REFERENCE_DETECTION_USE_GEMINI and settings.ENABLE_GEMINI_ANALYSIS and settings.GEMINI_API_KEY:
+                result = await gemini_service.detect_references(
+                    agent_text,
+                    user_text=self.last_user_text or ""
+                )
+            else:
+                # Fallback to Cerebras
+                result = await cerebras_service.detect_references(
+                    agent_text,
+                    user_text=self.last_user_text or ""
+                )
+
+            if result.get("detected") and result.get("references"):
+                # Send detected references to frontend
+                await self.frontend_ws.send_json({
+                    "type": "references_detected",
+                    "references": result["references"],
+                    "context": agent_text[:200] if len(agent_text) > 200 else agent_text
+                })
+                logger.info(
+                    f"Detected {len(result['references'])} reference(s) in agent response",
+                    extra={"references": [r.get("title") for r in result["references"]]}
+                )
+        except Exception as exc:
+            logger.warning(f"Reference detection failed: {exc}")
 
     async def _handle_guidance(self, payload: dict):
         enriched = {

@@ -20,6 +20,9 @@ const EnvSchema = z.object({
   PYTHON_VOICE_SERVICE_PUBLIC_URL: z.string().url().optional(), // Browser-facing URL (defaults to localhost:8000)
   VOICE_ENGINE_SECRET: z.string().min(1, 'Voice engine secret is required'),
 
+  // JWT authentication secret (falls back to VOICE_ENGINE_SECRET if not set)
+  JWT_SECRET: z.string().min(16).optional(),
+
   // CORS - comma-separated list of allowed origins
   CORS_ALLOWED_ORIGINS: z.string().default('http://localhost:5173,http://localhost:3000'),
 });

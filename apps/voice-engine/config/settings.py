@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     ADVANCED_PROMOTION_ERROR_RATE: float = float(os.getenv("ADVANCED_PROMOTION_ERROR_RATE", "0.08"))
     MIN_FLUENCY_NOTES_FOR_PROMOTION: int = int(os.getenv("MIN_FLUENCY_NOTES_FOR_PROMOTION", "8"))
     
+    # Reference Library Detection
+    ENABLE_REFERENCE_DETECTION: bool = os.getenv("ENABLE_REFERENCE_DETECTION", "true").lower() in ("true", "1", "yes")
+    REFERENCE_DETECTION_CONFIDENCE_THRESHOLD: float = float(os.getenv("REFERENCE_DETECTION_CONFIDENCE_THRESHOLD", "0.7"))
+    REFERENCE_DETECTION_USE_GEMINI: bool = os.getenv("REFERENCE_DETECTION_USE_GEMINI", "true").lower() in ("true", "1", "yes")
+
     ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
     ELEVENLABS_DEV_API_KEY: str = os.getenv("ELEVENLABS_DEV_API_KEY", "")
     

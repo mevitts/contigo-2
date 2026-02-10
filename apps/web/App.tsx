@@ -5,6 +5,8 @@ import { SessionSummary } from "./components/SessionSummary";
 import { Settings } from "./components/Settings";
 import { SessionHistory } from "./components/SessionHistory";
 import { PreRollView } from "./components/PreRollView";
+import { ReferenceLibrary } from "./components/ReferenceLibrary";
+import { ArticleView } from "./components/ArticleView";
 import { LoginView } from "./components/LoginView";
 import { PremiumOffer, type PremiumPlanOption, type PremiumPlanId } from "./components/PremiumOffer";
 import { MockStripeCheckout } from "./components/MockStripeCheckout";
@@ -17,7 +19,7 @@ import {
   completeSession,
   ContigoApiError,
 } from "./lib/api";
-import type { SessionRecord, UserProfile, SessionSummaryDetails } from "./lib/types";
+import type { SessionRecord, UserProfile, SessionSummaryDetails, WeeklyArticle } from "./lib/types";
 import { appConfig } from "./lib/config";
 import { ArrowLeft } from "lucide-react";
 
@@ -31,7 +33,9 @@ type AppView =
   | "history"
   | "settings"
   | "premium"
-  | "checkout";
+  | "checkout"
+  | "library"
+  | "article";
 
 type DifficultyLevel = "beginner" | "intermediate" | "advanced";
 
@@ -74,6 +78,7 @@ const DEFAULT_PREFERENCES: { difficulty: DifficultyLevel; adaptive: boolean } = 
 };
 
 const USER_STORAGE_KEY = "contigo:user";
+const TOKEN_STORAGE_KEY = "contigo:token";
 
 function loadStoredUser(): UserProfile | null {
   if (typeof window === "undefined") {
@@ -99,6 +104,21 @@ function persistUser(profile: UserProfile | null): void {
     }
   } catch (_err) {
     // Ignore storage errors (e.g., Safari private mode)
+  }
+}
+
+function persistToken(token: string | null): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    if (token) {
+      window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    } else {
+      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+  } catch (_err) {
+    // Ignore storage errors
   }
 }
 
@@ -134,7 +154,7 @@ function persistPreferences(difficulty: DifficultyLevel, adaptive: boolean): voi
   }
 }
 
-function extractUserFromUrl(): { profile: UserProfile | null; error?: string } {
+function extractUserFromUrl(): { profile: UserProfile | null; token?: string; error?: string } {
   if (typeof window === "undefined") {
     return { profile: null };
   }
@@ -163,7 +183,9 @@ function extractUserFromUrl(): { profile: UserProfile | null; error?: string } {
     demoMode: params.get("demo_mode") === "1",
   };
 
-  return { profile };
+  const token = params.get("token") || undefined;
+
+  return { profile, token };
 }
 
 function resolveErrorMessage(error: unknown): string {
@@ -192,6 +214,8 @@ export default function App() {
   const [premiumContext, setPremiumContext] = React.useState<{ durationSeconds: number } | null>(null);
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlanId | null>(null);
   const [summaryCache, setSummaryCache] = React.useState<Record<string, SessionSummaryDetails>>({});
+  // const [spotlightArticle, setSpotlightArticle] = React.useState<WeeklyArticle | null>(null);
+  const [activeArticle, setActiveArticle] = React.useState<WeeklyArticle | null>(null);
 
   const initialPreferences = React.useMemo(() => loadStoredPreferences(), []);
   const [difficultyPreference, setDifficultyPreference] = React.useState<DifficultyLevel>(initialPreferences.difficulty);
@@ -251,9 +275,12 @@ export default function App() {
       return;
     }
 
-    const { profile, error } = extractUserFromUrl();
+    const { profile, token, error } = extractUserFromUrl();
     if (profile) {
       applyAuthenticatedUser(profile);
+      if (token) {
+        persistToken(token);
+      }
       setView("dashboard");
       return;
     }
@@ -288,6 +315,21 @@ export default function App() {
     }
     void refreshSessions();
   }, [user?.id, refreshSessions]);
+
+  // Spotlight article – disabled for now (endpoint not deployed)
+  // React.useEffect(() => {
+  //   if (view !== "dashboard" || !user?.id) return;
+  //   let cancelled = false;
+  //   getCurrentSpotlight().then((article) => {
+  //     if (!cancelled) setSpotlightArticle(article);
+  //   });
+  //   return () => { cancelled = true; };
+  // }, [view, user?.id]);
+
+  const handleReadArticle = React.useCallback((article: WeeklyArticle) => {
+    setActiveArticle(article);
+    setView("article");
+  }, []);
 
   const handleStartSession = React.useCallback(async () => {
     if (!user) {
@@ -491,6 +533,7 @@ export default function App() {
   const handleLogout = React.useCallback(() => {
     setUser(null);
     persistUser(null);
+    persistToken(null);
     setSessions([]);
     setActiveSession(null);
     setVoiceUrl(undefined);
@@ -512,8 +555,11 @@ export default function App() {
     setIsAuthenticating(true);
     setAppError(null);
     try {
-      const profile = await authenticateDemoUser();
+      const { profile, token } = await authenticateDemoUser();
       applyAuthenticatedUser(profile);
+      if (token) {
+        persistToken(token);
+      }
       setView("dashboard");
     } catch (error) {
       setAppError(resolveErrorMessage(error));
@@ -535,8 +581,8 @@ export default function App() {
     setVoiceConnectionError(message);
   }, []);
 
-  // Only show nav for history and settings
-  const shouldShowNav = view === "history" || view === "settings";
+  // Only show nav for history, settings, library, and article
+  const shouldShowNav = view === "history" || view === "settings" || view === "library" || view === "article";
 
   return (
     <div className="min-h-screen bg-plaster text-textMain font-sans">
@@ -545,9 +591,9 @@ export default function App() {
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <button
               onClick={() => setView("dashboard")}
-              className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest hover:text-pink transition-colors"
+              className="flex items-center gap-2 text-base font-bold uppercase tracking-widest hover:text-pink transition-colors"
             >
-              <ArrowLeft size={16} />
+              <ArrowLeft size={20} />
               Back to Dashboard
             </button>
           </div>
@@ -588,8 +634,11 @@ export default function App() {
             onStartSession={handleStartSession}
             onGoToSettings={() => setView("settings")}
             onGoToNotebook={() => setView("history")}
+            onGoToLibrary={() => setView("library")}
             sessions={sessions}
             isLoading={sessionsLoading || isStartingSession}
+            // spotlightArticle={spotlightArticle}
+            onReadArticle={handleReadArticle}
           />
         )}
 
@@ -609,6 +658,19 @@ export default function App() {
               void handleSessionDeleted(sessionId);
             }}
             onSelectSession={handleSessionSelected}
+          />
+        )}
+
+        {view === "library" && user && (
+          <ReferenceLibrary userId={user.id} />
+        )}
+
+        {view === "article" && user && activeArticle && (
+          <ArticleView
+            articleId={activeArticle.id}
+            userId={user.id}
+            difficulty={difficultyPreference}
+            initialArticle={activeArticle}
           />
         )}
 
@@ -641,6 +703,7 @@ export default function App() {
             onEndSession={handleEndSession}
             onConnectionError={handleVoiceConnectionError}
             maxDurationSeconds={isPremiumUser ? undefined : freeLimitSeconds}
+            userId={user?.id}
           />
         )}
 
