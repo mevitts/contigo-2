@@ -684,7 +684,7 @@ export default function App() {
             websocketUrl={voiceUrl}
             onEndSession={handleEndSession}
             onConnectionError={handleVoiceConnectionError}
-            maxDurationSeconds={isPremiumUser ? undefined : freeLimitSeconds}
+            maxDurationSeconds={undefined}
             userId={user?.id}
           />
         )}
