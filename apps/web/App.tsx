@@ -208,7 +208,7 @@ export default function App() {
   const [sessionDuration, setSessionDuration] = React.useState(0);
   const [voiceUrl, setVoiceUrl] = React.useState<string | undefined>(undefined);
   const [voiceConnectionError, setVoiceConnectionError] = React.useState<string | null>(null);
-  const [isAuthenticating, setIsAuthenticating] = React.useState(false);
+  const [isAuthenticating] = React.useState(false);
   const [isStartingSession, setIsStartingSession] = React.useState(false);
   const [premiumContext, setPremiumContext] = React.useState<{ durationSeconds: number } | null>(null);
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlanId | null>(null);
