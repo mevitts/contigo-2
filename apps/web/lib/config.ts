@@ -6,7 +6,7 @@ type EnvSnapshot = Record<string, string | undefined> | undefined;
 let currentEnvSnapshot: EnvSnapshot = runtimeEnv;
 const loggedResolutions = new Set<string>();
 
-function logResolution(key: string, source: string, value?: string): void {
+function logResolution(key: string, source: string, _value?: string): void {
   if (typeof import.meta !== 'undefined' && !(import.meta as any).env?.DEV) return;
   const token = `${key}:${source}`;
   if (loggedResolutions.has(token)) {

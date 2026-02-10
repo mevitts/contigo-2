@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { ShieldCheck, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { PremiumPlanOption } from "./PremiumOffer";
 
 interface MockStripeCheckoutProps {

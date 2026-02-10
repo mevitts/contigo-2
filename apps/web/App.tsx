@@ -18,7 +18,6 @@ import {
   getVoiceWebsocketUrl,
   completeSession,
   ContigoApiError,
-  getCurrentSpotlight,
 } from "./lib/api";
 import type { SessionRecord, UserProfile, SessionSummaryDetails, WeeklyArticle } from "./lib/types";
 import { appConfig } from "./lib/config";
@@ -215,7 +214,7 @@ export default function App() {
   const [premiumContext, setPremiumContext] = React.useState<{ durationSeconds: number } | null>(null);
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlanId | null>(null);
   const [summaryCache, setSummaryCache] = React.useState<Record<string, SessionSummaryDetails>>({});
-  const [spotlightArticle, setSpotlightArticle] = React.useState<WeeklyArticle | null>(null);
+  // const [spotlightArticle, setSpotlightArticle] = React.useState<WeeklyArticle | null>(null);
   const [activeArticle, setActiveArticle] = React.useState<WeeklyArticle | null>(null);
 
   const initialPreferences = React.useMemo(() => loadStoredPreferences(), []);
@@ -638,7 +637,7 @@ export default function App() {
             onGoToLibrary={() => setView("library")}
             sessions={sessions}
             isLoading={sessionsLoading || isStartingSession}
-            spotlightArticle={null}
+            // spotlightArticle={spotlightArticle}
             onReadArticle={handleReadArticle}
           />
         )}

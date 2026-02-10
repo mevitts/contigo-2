@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Plus, BookOpen, Pin, Sparkles } from "lucide-react";
 import {
   Sheet,
