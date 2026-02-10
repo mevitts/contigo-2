@@ -11,7 +11,6 @@ import { LoginView } from "./components/LoginView";
 import { PremiumOffer, type PremiumPlanOption, type PremiumPlanId } from "./components/PremiumOffer";
 import { MockStripeCheckout } from "./components/MockStripeCheckout";
 import {
-  authenticateDemoUser,
   listSessions,
   createSession,
   deleteSession,
@@ -551,22 +550,6 @@ export default function App() {
     window.location.href = loginUrl.toString();
   }, []);
 
-  const startDemoLogin = React.useCallback(async () => {
-    setIsAuthenticating(true);
-    setAppError(null);
-    try {
-      const { profile, token } = await authenticateDemoUser();
-      applyAuthenticatedUser(profile);
-      if (token) {
-        persistToken(token);
-      }
-      setView("dashboard");
-    } catch (error) {
-      setAppError(resolveErrorMessage(error));
-    } finally {
-      setIsAuthenticating(false);
-    }
-  }, [applyAuthenticatedUser]);
 
   const userName = React.useMemo(() => {
     const { firstName, lastName } = user ?? {};
@@ -616,7 +599,6 @@ export default function App() {
         {view === "login" && (
           <LoginView
             onGoogleLogin={startGoogleLogin}
-            onDemoLogin={startDemoLogin}
             isLoading={isAuthenticating}
             error={appError}
           />

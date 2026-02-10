@@ -1,13 +1,12 @@
-import { Globe, LogIn, Sparkles } from "lucide-react";
+import { Globe, LogIn } from "lucide-react";
 
 interface LoginViewProps {
   onGoogleLogin: () => void;
-  onDemoLogin: () => void;
   isLoading?: boolean;
   error?: string | null;
 }
 
-export function LoginView({ onGoogleLogin, onDemoLogin, isLoading = false, error }: LoginViewProps) {
+export function LoginView({ onGoogleLogin, isLoading = false, error }: LoginViewProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-plaster px-6 py-12 text-center">
       <div className="flex items-center gap-2 mb-8 text-textSoft uppercase tracking-[0.5em] font-bold text-base">
@@ -16,9 +15,9 @@ export function LoginView({ onGoogleLogin, onDemoLogin, isLoading = false, error
       </div>
 
       <div className="max-w-xl w-full space-y-6">
-        <h1 className="text-5xl md:text-6xl font-serif text-textMain">Bienvenida</h1>
+        <h1 className="text-5xl md:text-6xl font-serif text-textMain">Bienvenido</h1>
         <p className="text-textSoft font-sans leading-relaxed text-lg">
-          Sign in with Google to use your real Contigo account. You can also explore with the demo profile while we finish your setup.
+          Your personal Spanish tutor, powered by AI. Sign in to start practicing.
         </p>
 
         {error && (
@@ -35,15 +34,6 @@ export function LoginView({ onGoogleLogin, onDemoLogin, isLoading = false, error
           >
             <LogIn size={18} />
             {isLoading ? "Starting..." : "Sign in with Google"}
-          </button>
-
-          <button
-            onClick={onDemoLogin}
-            disabled={isLoading}
-            className="w-full h-14 rounded-2xl border-2 border-gray-200 text-textMain font-bold tracking-widest uppercase flex items-center justify-center gap-2 hover:border-pink hover:text-pink transition disabled:opacity-70"
-          >
-            <Sparkles size={18} />
-            {isLoading ? "Please wait" : "Try demo mode"}
           </button>
         </div>
 
