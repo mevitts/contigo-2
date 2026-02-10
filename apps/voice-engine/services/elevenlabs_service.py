@@ -575,6 +575,18 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                     await self.elevenlabs_ws.send(json.dumps(interrupt_message))
                     logger.info("Sent interrupt signal to ElevenLabs")
                     
+                elif message["type"] == "reference_context":
+                    # User wants to discuss a reference — inject as contextual text
+                    title = message.get("title", "")
+                    content = message.get("content", "")
+                    context_text = f"[The learner wants to discuss this reference: \"{title}\". Content: {content[:500]}. Bring this up naturally in the conversation.]"
+                    context_message = {
+                        "type": "contextual_update",
+                        "text": context_text,
+                    }
+                    await self.elevenlabs_ws.send(json.dumps(context_message))
+                    logger.info(f"Sent reference context to ElevenLabs: {title}")
+
                 elif message["type"] == "end":
                     logger.info("Received end signal from frontend")
                     self.is_active = False

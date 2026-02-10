@@ -367,6 +367,11 @@ sessions.delete('/:sessionId', async (c) => {
         `DELETE FROM learning_notes WHERE conversation_id = $1::uuid`,
         [sessionId]
       );
+      // Delete user_references that point to this conversation
+      await client.query(
+        `DELETE FROM user_references WHERE conversation_id = $1::uuid`,
+        [sessionId]
+      );
       await client.query(
         `DELETE FROM conversations WHERE id = $1::uuid`,
         [sessionId]

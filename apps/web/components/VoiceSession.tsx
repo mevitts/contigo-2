@@ -1,10 +1,11 @@
 import React from "react";
-import { X, Mic, MicOff, HelpCircle, Eye, EyeOff, ClipboardPaste, Loader2, Check } from "lucide-react";
+import { X, Mic, MicOff, HelpCircle, Eye, EyeOff, BookOpen, Loader2, Check, Plus, MessageCircle, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import type { SessionRecord } from "../lib/types";
+import type { SessionRecord, Reference } from "../lib/types";
 import {
   translateText,
   createReference,
+  listReferences,
 } from "../lib/api";
 
 interface VoiceSessionProps {
@@ -105,8 +106,12 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
   const [nudgeTip, setNudgeTip] = React.useState<string | null>(null);
   const nudgeTimeoutRef = React.useRef<number>();
 
-  // Paste reference state
-  const [showPasteInput, setShowPasteInput] = React.useState(false);
+  // Reference sidebar state
+  const [showRefSidebar, setShowRefSidebar] = React.useState(false);
+  const [savedRefs, setSavedRefs] = React.useState<Reference[]>([]);
+  const [refsLoading, setRefsLoading] = React.useState(false);
+  const [expandedRefId, setExpandedRefId] = React.useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = React.useState(false);
   const [pastedContent, setPastedContent] = React.useState("");
   const [pasteSaving, setPasteSaving] = React.useState(false);
   const [pasteSaved, setPasteSaved] = React.useState(false);
@@ -379,6 +384,24 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
     fetchHelpTranslation(normalized, { force: true });
   }, [showTranscript, lastTutorText, fetchHelpTranslation, helpTranslation]);
 
+  const loadSavedRefs = React.useCallback(async () => {
+    if (!userId) return;
+    setRefsLoading(true);
+    try {
+      const refs = await listReferences(userId);
+      if (isMountedRef.current) setSavedRefs(refs);
+    } catch (error) {
+      console.error("Failed to load references:", error);
+    } finally {
+      if (isMountedRef.current) setRefsLoading(false);
+    }
+  }, [userId]);
+
+  // Load refs when sidebar opens
+  React.useEffect(() => {
+    if (showRefSidebar) loadSavedRefs();
+  }, [showRefSidebar, loadSavedRefs]);
+
   const handleSavePastedContent = React.useCallback(async () => {
     const trimmed = pastedContent.trim();
     if (!trimmed || !userId) return;
@@ -401,6 +424,8 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
 
       setPastedContent("");
       setPasteSaved(true);
+      setShowAddForm(false);
+      loadSavedRefs(); // refresh list
       setTimeout(() => {
         if (isMountedRef.current) setPasteSaved(false);
       }, 2000);
@@ -409,7 +434,19 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
     } finally {
       if (isMountedRef.current) setPasteSaving(false);
     }
-  }, [pastedContent, userId, session.id]);
+  }, [pastedContent, userId, session.id, loadSavedRefs]);
+
+  const handleDiscussReference = React.useCallback((ref: Reference) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: "reference_context",
+        title: ref.title,
+        content: ref.contentText || ref.title,
+      }));
+    }
+    setShowRefSidebar(false);
+  }, []);
 
   const enqueueAudioPlayback = React.useCallback((base64: string, mime?: string) => {
     if (!base64) {
@@ -778,15 +815,15 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowPasteInput((prev) => !prev)}
+            onClick={() => setShowRefSidebar((prev) => !prev)}
             className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-              showPasteInput
+              showRefSidebar
                 ? "bg-emerald-500 text-white shadow-md"
                 : "bg-white border-2 border-gray-200 text-gray-400 hover:border-emerald-400 hover:text-emerald-500"
             }`}
-            title="Paste text"
+            title="Reference Library"
           >
-            <ClipboardPaste size={20} />
+            <BookOpen size={20} />
           </button>
         </div>
       </div>
@@ -918,50 +955,133 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
         </div>
       </div>
 
-      {/* Paste Text Panel */}
+      {/* Reference Library Sidebar */}
       <AnimatePresence>
-        {showPasteInput && (
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
-            className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 shadow-lg px-6 py-4 max-w-2xl mx-auto rounded-t-2xl"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-bold uppercase tracking-widest text-gray-400">
-                Paste Text
-              </span>
-              <button
-                onClick={() => setShowPasteInput(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-              >
-                <X size={16} className="text-gray-500" />
-              </button>
-            </div>
-            <textarea
-              value={pastedContent}
-              onChange={(e) => setPastedContent(e.target.value)}
-              placeholder="Paste lyrics, a story, article text, or anything you want to discuss..."
-              className="w-full h-28 p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm text-textMain resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-300"
+        {showRefSidebar && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.3 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black"
+              onClick={() => setShowRefSidebar(false)}
             />
-            <div className="flex items-center justify-end gap-3 mt-3">
-              {pasteSaved && (
-                <span className="flex items-center gap-1 text-sm text-emerald-600 font-medium">
-                  <Check size={14} /> Saved
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 26, stiffness: 300 }}
+              className="fixed top-0 right-0 bottom-0 z-50 w-80 md:w-96 bg-white shadow-2xl flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <span className="text-sm font-bold uppercase tracking-widest text-gray-400">
+                  Reference Library
                 </span>
-              )}
-              <button
-                onClick={handleSavePastedContent}
-                disabled={!pastedContent.trim() || pasteSaving}
-                className="px-5 py-2 rounded-full bg-emerald-500 text-white text-sm font-bold uppercase tracking-widest hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-              >
-                {pasteSaving ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : null}
-                Save
-              </button>
-            </div>
-          </motion.div>
+                <button
+                  onClick={() => setShowRefSidebar(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                >
+                  <X size={16} className="text-gray-500" />
+                </button>
+              </div>
+
+              {/* Add new button */}
+              <div className="px-5 py-3 border-b border-gray-100">
+                {!showAddForm ? (
+                  <button
+                    onClick={() => setShowAddForm(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-emerald-400 hover:text-emerald-500 transition-colors text-sm font-bold uppercase tracking-widest"
+                  >
+                    <Plus size={16} />
+                    Paste new text
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <textarea
+                      value={pastedContent}
+                      onChange={(e) => setPastedContent(e.target.value)}
+                      placeholder="Paste lyrics, a story, article text..."
+                      autoFocus
+                      className="w-full h-24 p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm text-textMain resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-300"
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      {pasteSaved && (
+                        <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                          <Check size={12} /> Saved
+                        </span>
+                      )}
+                      <button
+                        onClick={() => { setShowAddForm(false); setPastedContent(""); }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSavePastedContent}
+                        disabled={!pastedContent.trim() || pasteSaving}
+                        className="px-4 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-bold uppercase tracking-widest hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                      >
+                        {pasteSaving ? <Loader2 size={12} className="animate-spin" /> : null}
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Reference list */}
+              <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
+                {refsLoading && (
+                  <div className="flex items-center justify-center py-8 text-gray-300">
+                    <Loader2 size={20} className="animate-spin" />
+                  </div>
+                )}
+                {!refsLoading && savedRefs.length === 0 && (
+                  <p className="text-center text-sm text-gray-300 py-8">
+                    No saved references yet. Paste text above to get started.
+                  </p>
+                )}
+                {savedRefs.map((ref) => (
+                  <div
+                    key={ref.id}
+                    className="rounded-xl border border-gray-100 bg-gray-50/50 overflow-hidden"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedRefId(expandedRefId === ref.id ? null : ref.id)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <ChevronRight
+                        size={14}
+                        className={`text-gray-300 transition-transform flex-shrink-0 ${expandedRefId === ref.id ? "rotate-90" : ""}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-textMain truncate">{ref.title}</p>
+                        <p className="text-xs text-gray-400 capitalize">{ref.referenceType.toLowerCase()}</p>
+                      </div>
+                    </button>
+                    {expandedRefId === ref.id && (
+                      <div className="px-4 pb-3 space-y-2">
+                        {ref.contentText && (
+                          <p className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap max-h-32 overflow-y-auto">
+                            {ref.contentText}
+                          </p>
+                        )}
+                        <button
+                          onClick={() => handleDiscussReference(ref)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 border border-sky-200 text-sky-600 text-xs font-bold uppercase tracking-widest hover:bg-sky-100 transition-colors"
+                        >
+                          <MessageCircle size={12} />
+                          Discuss this
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

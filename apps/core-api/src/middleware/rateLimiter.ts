@@ -30,11 +30,15 @@ const rateLimiter = (options: RateLimitOptions) => {
       return;
     }
 
-    const userId = c.get('userId'); // Assuming userId is set by authMiddleware
+    // Try to get userId from auth middleware. If missing and we're running in demo/dev
+    // allow a demo user id to be used so local development can bypass login.
+    const rawUserId = c.get('userId'); // Assuming userId is set by authMiddleware
+    const isDev = (c.env.NODE_ENV === 'development' || c.env.DEMO_MODE === 'true');
+    const demoUser = c.env.DEMO_USER_ID || 'aaaaaaaa-0000-4000-8000-000000000001';
+    const userId = rawUserId || (isDev ? demoUser : undefined);
     if (!userId) {
       // If no userId, rate limit by IP address (requires another middleware to get IP)
-      // For now, if no userId, bypass or return error, depending on policy.
-      // For this example, we'll return an error, assuming all rate-limited routes require auth.
+      // For now, if no userId and not in demo/dev, return error: all rate-limited routes require auth.
       return c.json({ error: 'Unauthorized', message: 'User ID missing for rate limiting' }, 401);
     }
 

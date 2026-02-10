@@ -56,11 +56,18 @@ app.use('/v1/session-token/*', rateLimiter({ windowMs: 60 * 1000, max: 30 }));
 app.route('/auth', auth);
 app.route('/v1/session-token', sessionToken);
 
-// Apply authMiddleware to all routes after this point
-app.use('*', authMiddleware);
+// Apply authMiddleware only to routes that require authentication
+app.use('/sessions/*', authMiddleware);
+app.use('/voice/*', authMiddleware);
+app.use('/v1/learning-notes/*', authMiddleware);
+app.use('/v1/references/*', authMiddleware);
 
-// Apply rateLimiter to all authenticated routes (after authMiddleware)
-app.use('*', rateLimiter({ windowMs: 60 * 1000, max: 100 }));
+// Apply rateLimiter to authenticated routes
+const authenticatedRateLimiter = rateLimiter({ windowMs: 60 * 1000, max: 100 });
+app.use('/sessions/*', authenticatedRateLimiter);
+app.use('/voice/*', authenticatedRateLimiter);
+app.use('/v1/learning-notes/*', authenticatedRateLimiter);
+app.use('/v1/references/*', authenticatedRateLimiter);
 
 // Routes that require authentication
 app.route('/sessions', sessions);
