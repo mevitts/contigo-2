@@ -12,6 +12,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download the OPUS-MT translation model so it's ready at runtime
+RUN python -c "from transformers import MarianMTModel, MarianTokenizer; \
+    MarianTokenizer.from_pretrained('Helsinki-NLP/opus-mt-es-en'); \
+    MarianMTModel.from_pretrained('Helsinki-NLP/opus-mt-es-en'); \
+    print('OPUS-MT model downloaded successfully')"
+
 # Copy the rest of the application code
 COPY . .
 

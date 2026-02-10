@@ -95,7 +95,7 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
       speaker: "tutor",
       text: session.topic
         ? `¿Listo para hablar sobre ${session.topic.toLowerCase()}?`
-        : "¿Qué hiciste este fin de semana?",
+        : "Connecting...",
     },
   ]);
   const [showTranscript, setShowTranscript] = React.useState(false);
@@ -181,7 +181,7 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
         speaker: "tutor",
         text: session.topic
           ? `¿Listo para hablar sobre ${session.topic.toLowerCase()}?`
-          : "¿Qué hiciste este fin de semana?",
+          : "Connecting...",
       },
     ]);
     setElapsedSeconds(0);

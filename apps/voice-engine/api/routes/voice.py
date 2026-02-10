@@ -926,6 +926,14 @@ async def get_conversation_summary(
 
             # Ownership check
             if str(conversation.user_id) != auth_user_id:
+                logger.warning(
+                    "Summary ownership mismatch",
+                    extra={
+                        "conversation_id": conversation_id,
+                        "conversation_user_id": str(conversation.user_id),
+                        "auth_user_id": auth_user_id,
+                    },
+                )
                 raise HTTPException(status_code=403, detail="Access denied")
 
             record = session.exec(
