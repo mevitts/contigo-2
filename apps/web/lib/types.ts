@@ -3,6 +3,7 @@ export interface UserProfile {
   email?: string;
   firstName?: string;
   lastName?: string;
+  picture?: string;
   organizationId?: string;
   connectionType?: string;
   demoMode: boolean;

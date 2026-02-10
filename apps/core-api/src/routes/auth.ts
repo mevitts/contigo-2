@@ -265,6 +265,7 @@ auth.get('/callback', async (c) => {
       email: profile.email || undefined,
       first_name: profile.given_name || undefined,
       last_name: profile.family_name || undefined,
+      picture: profile.picture || undefined,
       provider: 'google',
       token,
     });

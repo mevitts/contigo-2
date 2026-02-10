@@ -23,7 +23,7 @@ export function Settings({
 }: SettingsProps) {
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Explorer";
   const email = user?.email ?? "demo@contigo.app";
-  const accountId = user?.id ?? "demo-user-00000000";
+  const profilePicture = user?.picture;
   const membershipTag = user?.demoMode ? "Demo Mode" : "Member";
   const showUpgradeCta = Boolean(user?.demoMode && onUpgrade);
 
@@ -56,8 +56,12 @@ export function Settings({
           <div className="absolute top-0 right-0 w-32 h-32 bg-yellow opacity-10 rounded-bl-full -mr-8 -mt-8" />
           
           <div className="flex items-center gap-5 mb-8 relative z-10">
-            <div className="w-20 h-20 rounded-full border-4 border-yellow overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80" className="w-full h-full object-cover" alt="Profile" />
+            <div className="w-20 h-20 rounded-full border-4 border-yellow overflow-hidden bg-yellow flex items-center justify-center">
+              {profilePicture ? (
+                <img src={profilePicture} className="w-full h-full object-cover" alt="Profile" referrerPolicy="no-referrer" />
+              ) : (
+                <span className="text-2xl font-serif text-textMain">{fullName.charAt(0)}</span>
+              )}
             </div>
             <div>
               <h2 className="font-serif text-3xl text-textMain">{fullName}</h2>
@@ -69,10 +73,6 @@ export function Settings({
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
               <span className="text-textSoft font-bold text-sm uppercase tracking-widest">Email</span>
               <span className="font-medium text-textMain text-base">{email}</span>
-            </div>
-            <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <span className="text-textSoft font-bold text-sm uppercase tracking-widest">Account ID</span>
-              <span className="font-mono text-sm text-textMain bg-gray-100 px-2 py-1 rounded">{accountId.substring(0, 12)}...</span>
             </div>
           </div>
         </motion.section>

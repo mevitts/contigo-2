@@ -179,6 +179,7 @@ function extractUserFromUrl(): { profile: UserProfile | null; token?: string; er
     email: params.get("email") || undefined,
     firstName: params.get("first_name") || undefined,
     lastName: params.get("last_name") || undefined,
+    picture: params.get("picture") || undefined,
     demoMode: params.get("demo_mode") === "1",
   };
 
