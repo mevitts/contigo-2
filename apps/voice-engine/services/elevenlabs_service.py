@@ -510,14 +510,32 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
             self.elevenlabs_ws = await websockets.connect(signed_url)
             self.is_active = True
             logger.info("Connected to ElevenLabs WebSocket")
-            await self._emit_dynamic_variables_event("init")
 
-            # Give ElevenLabs time to ingest context before triggering greeting
-            await asyncio.sleep(1.0)
+            # Send conversation_initiation_client_data FIRST so dynamic variables
+            # (including greeting_prompt) are available when the agent formulates
+            # its first_message.  This replaces the older contextual_update approach.
+            if self.dynamic_variables:
+                init_payload = {
+                    "type": "conversation_initiation_client_data",
+                    "dynamic_variables": {
+                        k: str(v) for k, v in self.dynamic_variables.items() if v is not None
+                    },
+                }
+                await self.elevenlabs_ws.send(json.dumps(init_payload))
+                logger.info(
+                    "Sent conversation_initiation_client_data with dynamic variables",
+                    extra={
+                        "field_count": len(self.dynamic_variables),
+                        "keys": sorted(self.dynamic_variables.keys()),
+                    },
+                )
+
+            # Small pause then silence to trigger the agent's first message
+            await asyncio.sleep(0.5)
             initial_silence = {"user_audio_chunk": INITIAL_SILENCE_CHUNK}
             if self.elevenlabs_ws:
                 await self.elevenlabs_ws.send(json.dumps(initial_silence))
-            logger.info("Sent initial silence to trigger agent greeting (context sent 1s prior)")
+            logger.info("Sent initial silence to trigger agent greeting")
             
             logger.info("Starting bidirectional audio bridge")
             

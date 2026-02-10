@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { DEMO_MODE_ENABLED, hasGoogleConfig, sanitizeRedirectTarget, buildRedirectUrl, wantsJsonResponse, exchangeCodeForGoogleTokens, fetchGoogleUserProfile, upsertUser, generateAuthToken } from '../services/auth_service.js';
+import { DEMO_MODE_ENABLED, hasGoogleConfig, sanitizeRedirectTarget, buildRedirectUrl, wantsJsonResponse, exchangeCodeForGoogleTokens, fetchGoogleUserProfile, upsertUser, generateAuthToken, externalIdToUuid } from '../services/auth_service.js';
 import type { AppEnv, DbEnv } from '../services/auth_service.js';
 import { DEMO_USER } from '../constants.js';
 import type { Config } from '../config.js';
@@ -223,17 +223,16 @@ auth.get('/callback', async (c) => {
       throw new Error('Google profile missing subject identifier');
     }
 
-    let userId: string | null = null;
+    // Always convert Google's numeric ID to a valid UUID
+    const resolvedUserId = externalIdToUuid(profile.sub);
     try {
-      userId = await upsertUser(c.env, {
+      await upsertUser(c.env, {
         externalUserId: profile.sub,
         email: profile.email,
       });
     } catch (err) {
       console.warn('Failed to persist authenticated user to DB:', err);
     }
-
-    const resolvedUserId = userId || profile.sub;
     let token: string | undefined;
     const secret = getJwtSecret(c.var.config, c.env);
     if (secret) {

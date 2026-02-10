@@ -147,10 +147,14 @@ export async function fetchGoogleUserProfile(accessToken: string): Promise<Googl
 /**
  * Converts an external user ID (e.g. Google's numeric sub) into a deterministic UUID v5-style ID.
  */
-function externalIdToUuid(externalId: string): string {
-  const hash = createHash('sha256').update(`contigo:${externalId}`).digest('hex');
-  // Format as UUID: 8-4-4-4-12
-  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+export function externalIdToUuid(externalId: string): string {
+  const hex = createHash('sha256').update(`contigo:${externalId}`).digest('hex').slice(0, 32);
+  // Set version (nibble at index 12) to 5 and variant (nibble at index 16) to 8-b
+  const chars = hex.split('');
+  chars[12] = '5'; // UUID version 5
+  chars[16] = ['8', '9', 'a', 'b'][parseInt(chars[16], 16) % 4]; // UUID variant 1
+  const h = chars.join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }
 
 /**

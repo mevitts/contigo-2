@@ -318,26 +318,17 @@ export async function translateText(text: string, targetLanguage = 'en'): Promis
     return '';
   }
 
-  // Call local translation service directly (not through core-api)
-  const translationUrl = `${appConfig.translationServiceUrl}/translate`;
-  console.log('[api] translation request', { url: translationUrl });
-
-  const response = await fetch(translationUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({ text: trimmed, target_language: targetLanguage }),
-  });
-
-  if (!response.ok) {
-    console.error('[api] translation failed', { status: response.status });
+  try {
+    // Route through core-api proxy (/voice/translate → voice-engine)
+    const data = await apiRequest<any>('/voice/translate', {
+      method: 'POST',
+      body: JSON.stringify({ text: trimmed, target_language: targetLanguage }),
+    });
+    return data?.translation ?? trimmed;
+  } catch (err) {
+    console.error('[api] translation failed', err);
     return trimmed; // Fall back to original text
   }
-
-  const data = await response.json();
-  return data?.translation ?? trimmed;
 }
 
 export async function getSessionSummary(conversationId: string): Promise<SessionSummaryDetails | null> {
@@ -604,23 +595,31 @@ function normalizeAnalysis(input: any): ArticleAnalysis {
 
 export async function getCurrentSpotlight(signal?: AbortSignal): Promise<WeeklyArticle | null> {
   try {
+    // Try core-api proxy first, fall back to direct voice-engine URL
     const base = appConfig.translationServiceUrl;
-    const response = await fetch(`${base}/articles/spotlight`, {
-      method: 'GET',
-      headers: JSON_HEADERS,
-      signal,
-    });
+    const urls = [
+      `${appConfig.apiBaseUrl.replace(/\/$/, '')}/articles/spotlight`,
+      `${base}/articles/spotlight`,
+    ];
 
-    if (!response.ok) {
-      return null;
+    for (const url of urls) {
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: JSON_HEADERS,
+          signal,
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.article) {
+            return normalizeArticle(data.article);
+          }
+        }
+      } catch {
+        continue;
+      }
     }
-
-    const data = await response.json();
-    if (!data?.article) {
-      return null;
-    }
-
-    return normalizeArticle(data.article);
+    return null;
   } catch (err) {
     console.error('[api] spotlight fetch failed', err);
     return null;

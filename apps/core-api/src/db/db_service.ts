@@ -15,7 +15,7 @@ function getDbPool(env: DbEnv): PoolType {
     const isProduction = process.env.ENVIRONMENT === 'production';
     dbPool = new Pool({
       connectionString: env.VULTR_DB_CONNECTION_STRING,
-      ssl: isProduction ? { rejectUnauthorized: true } : undefined,
+      ssl: isProduction ? { rejectUnauthorized: false } : undefined,
     });
     // Add an error listener to the pool
     dbPool.on('error', (err: Error) => {

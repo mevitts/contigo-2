@@ -498,7 +498,12 @@ def _build_dynamic_variables_payload(
                 f"Welcome them back warmly and reference your last conversation about '{topic}'."
             )
     if "greeting_prompt" not in payload:
-        payload["greeting_prompt"] = "Greet the learner warmly and ask what they'd like to talk about today."
+        payload["greeting_prompt"] = (
+            "This is a new learner you haven't met before. "
+            "Introduce yourself warmly by name, welcome them, and ask a simple get-to-know-you question "
+            "like what their name is, where they are from, or why they want to learn Spanish. "
+            "Keep it short and friendly — one or two sentences max."
+        )
 
     if memory_snippets:
         payload["memory_snippets"] = " | ".join(memory_snippets[:5])
