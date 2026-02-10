@@ -436,6 +436,8 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
     }
   }, [pastedContent, userId, session.id, loadSavedRefs]);
 
+  const [discussSentId, setDiscussSentId] = React.useState<string | null>(null);
+
   const handleDiscussReference = React.useCallback((ref: Reference) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -445,7 +447,14 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
         content: ref.contentText || ref.title,
       }));
     }
-    setShowRefSidebar(false);
+    // Show "Sent!" confirmation briefly before closing sidebar
+    setDiscussSentId(ref.id);
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        setDiscussSentId(null);
+        setShowRefSidebar(false);
+      }
+    }, 1200);
   }, []);
 
   const enqueueAudioPlayback = React.useCallback((base64: string, mime?: string) => {
@@ -1070,10 +1079,24 @@ export function VoiceSession({ onEndSession, session, websocketUrl, onConnection
                         )}
                         <button
                           onClick={() => handleDiscussReference(ref)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 border border-sky-200 text-sky-600 text-xs font-bold uppercase tracking-widest hover:bg-sky-100 transition-colors"
+                          disabled={discussSentId === ref.id}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                            discussSentId === ref.id
+                              ? "bg-emerald-50 border border-emerald-300 text-emerald-600"
+                              : "bg-sky-50 border border-sky-200 text-sky-600 hover:bg-sky-100"
+                          }`}
                         >
-                          <MessageCircle size={12} />
-                          Discuss this
+                          {discussSentId === ref.id ? (
+                            <>
+                              <Check size={12} />
+                              Sent to tutor!
+                            </>
+                          ) : (
+                            <>
+                              <MessageCircle size={12} />
+                              Discuss this
+                            </>
+                          )}
                         </button>
                       </div>
                     )}

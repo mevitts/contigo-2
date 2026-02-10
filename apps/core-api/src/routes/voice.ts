@@ -41,7 +41,11 @@ voice.get('/websocket-url', async (c) => {
     }, 400);
   }
 
-  const { sessionId, userId } = validated.data;
+  const { sessionId } = validated.data;
+  // Always use the authenticated userId from the JWT token (set by authMiddleware),
+  // NOT the query param, to prevent userId mismatches between session creation
+  // and later API calls (e.g. summary proxy uses auth token userId).
+  const userId = c.get('userId') || validated.data.userId;
   let difficulty = validated.data.difficulty || null;
   let adaptiveFlag = parseAdaptiveFlag(validated.data.adaptive || null);
   let metadata: { difficulty: string | null; adaptive: boolean | null; } | null = null;
@@ -249,19 +253,22 @@ voice.get('/conversations/:conversationId/summary', async (c) => {
 
   try {
     // Generate a short-lived JWT for voice-engine service-to-service auth
+    const authenticatedUserId = c.get('userId');
     let svcHeaders: Record<string, string> = {};
     if (c.env.VOICE_ENGINE_SECRET) {
       const secret = new TextEncoder().encode(c.env.VOICE_ENGINE_SECRET);
       const svcToken = await new jose.SignJWT({})
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
-        .setSubject(c.get('userId') || 'system')
+        .setSubject(authenticatedUserId || 'system')
         .setIssuer('urn:contigo:core-api')
         .setAudience('urn:contigo:voice-engine')
         .setExpirationTime('5m')
         .sign(secret);
       svcHeaders = { 'Authorization': `Bearer ${svcToken}` };
     }
+
+    console.log(`[summary-proxy] userId=${authenticatedUserId}, conversation=${conversationId}`);
 
     const response = await fetch(targetUrl, {
       headers: svcHeaders,

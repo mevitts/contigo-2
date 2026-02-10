@@ -597,7 +597,13 @@ Be specific and actionable. Focus on what the tutor should do RIGHT NOW."""
                     # User wants to discuss a reference — inject as contextual text
                     title = message.get("title", "")
                     content = message.get("content", "")
-                    context_text = f"[The learner wants to discuss this reference: \"{title}\". Content: {content[:500]}. Bring this up naturally in the conversation.]"
+                    context_text = (
+                        f"[IMPORTANT — The learner just selected \"{title}\" from their reference library to discuss. "
+                        f"Acknowledge this by saying something like '¡Ah, {title}! ¡Buena elección!' or similar, "
+                        f"clearly restating the title so the learner knows you received it. "
+                        f"Then naturally steer the conversation toward this reference. "
+                        f"Content: {content[:500]}]"
+                    )
                     context_message = {
                         "type": "contextual_update",
                         "text": context_text,
