@@ -614,6 +614,7 @@ export default function App() {
         {view === "dashboard" && (
           <Dashboard
             userName={userName}
+            userPicture={user?.picture}
             onStartSession={handleStartSession}
             onGoToSettings={() => setView("settings")}
             onGoToNotebook={() => setView("history")}

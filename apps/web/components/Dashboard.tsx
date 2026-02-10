@@ -24,6 +24,7 @@ const GREETINGS = [
 
 interface DashboardProps {
   userName: string;
+  userPicture?: string;
   onStartSession: () => void;
   onGoToSettings: () => void;
   onGoToNotebook: () => void;
@@ -43,7 +44,7 @@ const NoiseOverlay = () => (
   />
 );
 
-export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNotebook, onGoToLibrary, isLoading = false, spotlightArticle, onReadArticle }: DashboardProps) {
+export function Dashboard({ userName, userPicture, onStartSession, onGoToSettings, onGoToNotebook, onGoToLibrary, isLoading = false, spotlightArticle, onReadArticle }: DashboardProps) {
   const [greetingIndex] = useState(() => Math.floor(Math.random() * GREETINGS.length));
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipTimeout = useRef<ReturnType<typeof setTimeout>>();
@@ -82,7 +83,11 @@ export function Dashboard({ userName, onStartSession, onGoToSettings, onGoToNote
             onClick={onGoToSettings}
             className="relative w-16 h-16 md:w-20 md:h-20 rounded-full border-[3px] border-yellow shadow-lg overflow-hidden cursor-pointer hover:scale-105 transition-all"
           >
-            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80" className="w-full h-full object-cover" alt="Profile" />
+            {userPicture ? (
+              <img src={userPicture} className="w-full h-full object-cover" alt="Profile" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="w-full h-full bg-yellow flex items-center justify-center text-xl font-serif text-textMain">{userName.charAt(0)}</div>
+            )}
         </div>
       </div>
 

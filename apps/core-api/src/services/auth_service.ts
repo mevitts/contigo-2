@@ -1,5 +1,6 @@
 import { query } from '../db/db_service.js';
 import * as jose from 'jose';
+import { createHash } from 'crypto';
 
 const DEFAULT_FRONTEND_URL = 'http://localhost:5173';
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -144,17 +145,28 @@ export async function fetchGoogleUserProfile(accessToken: string): Promise<Googl
 }
 
 /**
+ * Converts an external user ID (e.g. Google's numeric sub) into a deterministic UUID v5-style ID.
+ */
+function externalIdToUuid(externalId: string): string {
+  const hash = createHash('sha256').update(`contigo:${externalId}`).digest('hex');
+  // Format as UUID: 8-4-4-4-12
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+}
+
+/**
  * Upserts a user record in the database.
  * Creates new user if not exists, or updates email if changed.
+ * Converts external OAuth IDs to deterministic UUIDs.
  *
  * @param env - Database environment with connection string
  * @param opts - User details (externalUserId from OAuth, optional email)
- * @returns The user ID (same as externalUserId)
+ * @returns The database user ID (UUID)
  */
 export async function upsertUser(
   env: DbEnv,
   opts: { externalUserId: string; email?: string | null }
 ): Promise<string> {
+  const userId = externalIdToUuid(opts.externalUserId);
   const email = opts.email || `user+${opts.externalUserId}@contigo.local`;
   const workosId = `oauth-${opts.externalUserId}`;
 
@@ -165,10 +177,10 @@ export async function upsertUser(
      ON CONFLICT (id) DO UPDATE SET
        email = COALESCE(EXCLUDED.email, users.email),
        workos_id = COALESCE(users.workos_id, EXCLUDED.workos_id)`,
-    [opts.externalUserId, email, workosId]
+    [userId, email, workosId]
   );
 
-  return opts.externalUserId;
+  return userId;
 }
 
 /**
